@@ -47,7 +47,7 @@ export function shapeExtents(shape: Shape): { hx: number; hy: number } {
   }
 }
 
-export function nodeBounds(node: BubbleNode): Bounds {
+export function nodeBounds(node: BubbleNode, _project?: Project): Bounds {
   const { hx, hy } = shapeExtents(node.shape);
   return { minX: node.x - hx, minY: node.y - hy, maxX: node.x + hx, maxY: node.y + hy };
 }

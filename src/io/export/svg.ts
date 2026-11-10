@@ -34,7 +34,7 @@ const FOOTER_PT = 40;
 
 export function contentBounds(project: Project, nodeIds?: string[]): Bounds | null {
   const ids = nodeIds ?? project.nodeOrder;
-  return unionBounds(ids.map((id) => project.nodes[id]).filter(Boolean).map(nodeBounds));
+  return unionBounds(ids.map((id) => project.nodes[id]).filter(Boolean).map((n) => nodeBounds(n, project)));
 }
 
 export function buildSvg(project: Project, opts: ExportOptions = DEFAULT_EXPORT_OPTIONS): SvgResult | null {

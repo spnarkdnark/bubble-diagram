@@ -94,7 +94,7 @@ export function buildImport(project: Project, rows: CsvRow[], fallbackCenter: Po
 
   const radii = rows.map((r) => r.radiusFt);
   const size = gridSize(radii);
-  const existing = unionBounds(Object.values(project.nodes).map(nodeBounds));
+  const existing = unionBounds(Object.values(project.nodes).map((n) => nodeBounds(n, project)));
   const origin = existing
     ? { x: existing.minX, y: existing.maxY + Math.max(10, Math.max(...radii) * 0.5) }
     : { x: fallbackCenter.x - size.width / 2, y: fallbackCenter.y - size.height / 2 };

@@ -331,7 +331,7 @@ export function centerOn(p: Point, zoom = ui().view.zoom) {
 
 export function zoomToFit() {
   const doc = getDoc();
-  const b = unionBounds(doc.nodeOrder.map((id) => nodeBounds(doc.nodes[id])));
+  const b = unionBounds(doc.nodeOrder.map((id) => nodeBounds(doc.nodes[id], doc)));
   if (!b) return centerOn({ x: 0, y: 0 }, 1);
   const { stageSize } = ui();
   const pad = 60;

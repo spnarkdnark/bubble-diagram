@@ -3,6 +3,7 @@ import { useDocument } from '../store/documentStore';
 import { useUi } from '../store/uiStore';
 import * as A from '../store/actions';
 import { NUDGE_BIG_FT, NUDGE_FT } from '../model/defaults';
+import { armPasteStyle } from '../io/clipboardActions';
 
 export interface ShortcutHandlers {
   save?: () => void;
@@ -36,6 +37,9 @@ export function useKeyboardShortcuts(handlers: ShortcutHandlers = {}) {
         if (e.key === 'Escape') ui.setExportOpen(false);
         return;
       }
+
+      // Ctrl+C / X / V are handled by native copy/cut/paste events (io/clipboardActions.ts)
+      if (mod && e.shiftKey && key === 'v') armPasteStyle();
 
       if (mod && key === 'z') {
         e.preventDefault();

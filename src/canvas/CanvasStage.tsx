@@ -12,6 +12,7 @@ import { BubbleShape } from './shapes/BubbleShape';
 import { ConnectionLine } from './shapes/ConnectionLine';
 import { GridLayer } from './layers/GridLayer';
 import { handlePosition, hitTest, topNodeAt } from './hitTest';
+import { pointer } from './pointer';
 
 const ACCENT = '#2f7de1';
 const HIT_TOL_PX = 7;
@@ -156,6 +157,9 @@ export function CanvasStage() {
       const it = interaction.current;
       const ui = useUi.getState();
       const p = toWorld(e.clientX, e.clientY);
+      const rect = containerRef.current!.getBoundingClientRect();
+      pointer.world = p;
+      pointer.inside = e.clientX >= rect.left && e.clientX <= rect.right && e.clientY >= rect.top && e.clientY <= rect.bottom;
       switch (it.kind) {
         case 'pan':
           ui.setView({ panX: it.panX + e.clientX - it.sx, panY: it.panY + e.clientY - it.sy });
@@ -335,7 +339,10 @@ export function CanvasStage() {
       className="canvas"
       onMouseDown={onMouseDown}
       onContextMenu={(e) => e.preventDefault()}
-      onMouseLeave={() => setPointerWorld(null)}
+      onMouseLeave={() => {
+        setPointerWorld(null);
+        pointer.inside = false;
+      }}
     >
       <Stage width={size.width} height={size.height} x={view.panX} y={view.panY} scaleX={k} scaleY={k} listening={false}>
         {doc.settings.grid.visible && (

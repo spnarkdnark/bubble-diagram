@@ -43,6 +43,8 @@ export function DrawingPanel() {
           <dt>Space + drag</dt><dd>Pan (or middle mouse)</dd>
           <dt>Shift + click</dt><dd>Add to selection</dd>
           <dt>Arrows</dt><dd>Nudge 1′ (Shift 10′)</dd>
+          <dt>Ctrl C / X / V</dt><dd>Copy / Cut / Paste at cursor</dd>
+          <dt>Ctrl ⇧V</dt><dd>Paste style onto selection</dd>
           <dt>Ctrl D / A</dt><dd>Duplicate / Select all</dd>
           <dt>Ctrl Z / ⇧Z</dt><dd>Undo / Redo</dd>
           <dt>F / Ctrl 0</dt><dd>Fit / 100% (true size)</dd>

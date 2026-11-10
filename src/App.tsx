@@ -8,6 +8,7 @@ import { ExportDialog } from './ui/ExportDialog';
 import { useKeyboardShortcuts } from './hooks/useKeyboardShortcuts';
 import { installSelectionPruning } from './store/actions';
 import { installAutosave } from './io/autosave';
+import { installClipboard } from './io/clipboardActions';
 import { openProject, saveProject } from './io/fileActions';
 
 const shortcutHandlers = { save: saveProject, open: openProject };
@@ -15,6 +16,7 @@ const shortcutHandlers = { save: saveProject, open: openProject };
 export function App() {
   useEffect(() => installSelectionPruning(), []);
   useEffect(() => installAutosave(), []);
+  useEffect(() => installClipboard(), []);
   useKeyboardShortcuts(shortcutHandlers);
   return (
     <div className="app">
