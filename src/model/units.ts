@@ -126,3 +126,14 @@ export function niceScaleBarFt(unitsPerFt: number, maxUnits: number): number {
 export function scaleBarSegments(lenFt: number): number {
   return lenFt % 4 === 0 || lenFt % 5 !== 0 ? 4 : 5;
 }
+
+/** Paper-point values for the UI: 0.75 -> "0.75 pt". */
+export function formatPt(pt: number): string {
+  return `${+pt.toFixed(2)} pt`;
+}
+
+/** Parse "3", "3pt" or "3 pt" into points. */
+export function parsePt(input: string): number | null {
+  const v = parseFloat(input);
+  return Number.isFinite(v) ? v : null;
+}

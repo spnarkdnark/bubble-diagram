@@ -1,21 +1,35 @@
+/** Right sidebar: properties of the selection, or drawing settings when nothing is selected. */
 import { useUi } from '../../store/uiStore';
 import { BubbleProps } from './BubbleProps';
 import { CategoryPanel } from './CategoryPanel';
 import { ConnectionProps } from './ConnectionProps';
 import { DrawingPanel } from './DrawingPanel';
+import { GraphicPanel } from './GraphicPanel';
 import { NodeOverlaps, OverlapProps } from './OverlapProps';
+import { OverlapSettingsPanel } from './OverlapSettingsPanel';
+import { ShortcutsHelp } from './ShortcutsHelp';
 
 export function PropertiesPanel() {
-  const sel = useUi((s) => s.selection);
+  const { nodes, connections, overlaps } = useUi((s) => s.selection);
   return (
     <aside className="sidebar">
-      {sel.nodes.length > 0 && <BubbleProps ids={sel.nodes} />}
-      {sel.nodes.length > 0 && <NodeOverlaps ids={sel.nodes} />}
-      {sel.nodes.length === 0 && sel.overlaps.length > 0 && <OverlapProps keys={sel.overlaps} />}
-      {sel.nodes.length === 0 && sel.overlaps.length === 0 && sel.connections.length > 0 && (
-        <ConnectionProps ids={sel.connections} />
+      {nodes.length > 0 ? (
+        <>
+          <BubbleProps ids={nodes} />
+          <NodeOverlaps ids={nodes} />
+        </>
+      ) : overlaps.length > 0 ? (
+        <OverlapProps keys={overlaps} />
+      ) : connections.length > 0 ? (
+        <ConnectionProps ids={connections} />
+      ) : (
+        <>
+          <DrawingPanel />
+          <GraphicPanel />
+          <OverlapSettingsPanel />
+          <ShortcutsHelp />
+        </>
       )}
-      {sel.nodes.length === 0 && sel.connections.length === 0 && sel.overlaps.length === 0 && <DrawingPanel />}
       <CategoryPanel />
     </aside>
   );

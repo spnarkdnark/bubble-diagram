@@ -835,3 +835,6 @@ kbd {
 .toast-action:hover {
   text-decoration: underline;
 }
+.shortcut-row {
+  display: contents;
+}

@@ -1,4 +1,5 @@
 import type { LabelSecondary, StrokeStyle, StyleKey, StyleProps } from '../../model/types';
+import { formatPt, parsePt } from '../../model/units';
 import {
   Checkbox,
   ColorField,
@@ -9,12 +10,6 @@ import {
   Slider,
   type OverrideMark,
 } from '../controls/Controls';
-
-const fmtPt = (v: number) => `${+v.toFixed(2)} pt`;
-const parsePt = (s: string) => {
-  const v = parseFloat(s);
-  return Number.isFinite(v) ? v : null;
-};
 
 export interface StyleSource {
   /** shared value across the edited items, or null when mixed */
@@ -64,7 +59,7 @@ export function StyleFields({ src, compact }: { src: StyleSource; compact?: bool
         <Field label="Weight" override={o?.('strokeWeightPt')}>
           <NumberField
             value={src.get('strokeWeightPt')}
-            format={fmtPt}
+            format={formatPt}
             parse={parsePt}
             step={0.25}
             min={0}
@@ -89,7 +84,7 @@ export function StyleFields({ src, compact }: { src: StyleSource; compact?: bool
         <Field label="Size" override={o?.('labelSizePt')}>
           <NumberField
             value={src.get('labelSizePt')}
-            format={fmtPt}
+            format={formatPt}
             parse={parsePt}
             step={1}
             min={3}
