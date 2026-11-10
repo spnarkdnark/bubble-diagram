@@ -464,13 +464,14 @@ export function movePoint(node: BubbleNode, index: number, p: Point, snap: SnapI
   const points = shape.points.slice();
   const old = points[index];
   if (snap) {
-    const same = old.t === 'anchor' && old.node === snap.ring.id;
+    // staying on the same bubble keeps its travel direction and arc flag
+    const same = old.t === 'anchor' && old.node === snap.ring.id ? old : null;
     points[index] = {
       t: 'anchor',
       node: snap.ring.id,
       angle: snap.angle,
-      dir: same ? (old as any).dir : 1,
-      arc: same ? (old as any).arc : false,
+      dir: same ? same.dir : 1,
+      arc: same ? same.arc : false,
     };
   } else points[index] = { t: 'free', x: p.x - node.x, y: p.y - node.y };
   // keep arcs valid on both sides of the moved point

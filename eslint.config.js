@@ -19,6 +19,10 @@ export default tseslint.config(
   {
     // tests poke at untyped app state through window.__bd
     files: ['e2e/**', 'tests/**'],
-    rules: { '@typescript-eslint/no-explicit-any': 'off' },
+    rules: {
+      '@typescript-eslint/no-explicit-any': 'off',
+      // Playwright fixtures call a function named `use`, which is not a React hook
+      'react-hooks/rules-of-hooks': 'off',
+    },
   },
 );

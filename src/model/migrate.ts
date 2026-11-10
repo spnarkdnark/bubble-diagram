@@ -1,3 +1,5 @@
+/* Parsing untrusted JSON: values are `any` until validated field by field below. */
+/* eslint-disable @typescript-eslint/no-explicit-any */
 import type { BlobPoint, OverlapMode, Project, Shape, StyleOverrides, StyleProps } from './types';
 import { SCHEMA_VERSION } from './types';
 import { DEFAULT_GRAPHIC, DEFAULT_OVERLAP, DEFAULT_SETTINGS, DEFAULT_STYLE } from './defaults';

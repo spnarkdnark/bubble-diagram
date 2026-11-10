@@ -2,7 +2,7 @@ import { useEffect, useMemo, useState } from 'react';
 import { loadOutlineFont } from '../render/fonts';
 import { useDoc } from '../store/documentStore';
 import { useUi } from '../store/uiStore';
-import { buildSvg, type ExportOptions } from '../io/export/svg';
+import { buildSvg } from '../io/export/svg';
 import { clampDpi, svgToPng } from '../io/export/png';
 import { pageLayout, SHEETS, svgToPdf, type Orientation, type SheetId } from '../io/export/pdf';
 import { downloadBlob, safeFilename } from '../io/download';
@@ -31,12 +31,6 @@ function ExportDialogBody() {
   const [orientation, setOrientation] = useState<Orientation>('auto');
   const [busy, setBusy] = useState(false);
 
-  const opts: ExportOptions = {
-    includeGrid,
-    includeScaleBar,
-    marginIn: 0.5,
-    nodeIds: onlySelection && selection.length ? selection : undefined,
-  };
   // hand-lettering fonts must be parsed before labels can be outlined
   const labelFont = doc.settings.graphic.labelFont;
   const [fontReady, setFontReady] = useState(labelFont === 'clean');
@@ -50,7 +44,15 @@ function ExportDialogBody() {
     };
   }, [labelFont]);
   const svg = useMemo(
-    () => (fontReady ? buildSvg(doc, opts) : null),
+    () =>
+      fontReady
+        ? buildSvg(doc, {
+            includeGrid,
+            includeScaleBar,
+            marginIn: 0.5,
+            nodeIds: onlySelection && selection.length ? selection : undefined,
+          })
+        : null,
     [doc, includeGrid, includeScaleBar, onlySelection, selection, fontReady],
   );
   const layout = svg && format === 'pdf' ? pageLayout(svg, sheet, orientation) : null;

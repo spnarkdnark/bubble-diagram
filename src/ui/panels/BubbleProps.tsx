@@ -1,7 +1,7 @@
-import type { Id, StyleKey } from '../../model/types';
+import type { BubbleNode, Id, StyleKey, StyleProps } from '../../model/types';
 import { useDoc } from '../../store/documentStore';
 import * as A from '../../store/actions';
-import { resolveStyle, totalArea } from '../../model/selectors';
+import { baseStyle, resolveStyle, totalArea } from '../../model/selectors';
 import { nodeArea, radiusFromArea, shapeSize } from '../../model/geometry';
 import { MIN_RADIUS_FT } from '../../model/defaults';
 import { formatArea, formatFeetInches, formatLengthCompact, parseArea, parseLength } from '../../model/units';
@@ -21,9 +21,13 @@ export function BubbleProps({ ids }: { ids: Id[] }) {
   const anyOverrides = nodes.some((n) => Object.keys(n.style).length > 0);
   const catId = common(nodes, (n) => n.categoryId);
 
+  /** What a field shows: the element's own override, else the inherited category value
+   * (for the outline that means `null` = auto, not the resolved color). */
+  const shown = <K extends StyleKey>(n: BubbleNode, k: K): StyleProps[K] =>
+    n.style[k] !== undefined ? (n.style[k] as StyleProps[K]) : baseStyle(n, doc)[k];
+
   const src: StyleSource = {
-    get: <K extends StyleKey>(k: K) =>
-      common(nodes, (n) => (n.style[k] !== undefined ? n.style[k] : resolveStyle(n, doc)[k])) as any,
+    get: (k) => common(nodes, (n) => shown(n, k)),
     set: (k, v) => A.setNodeStyle(ids, k, v),
     strokeColor: common(resolved, (s) => s.stroke),
     override: (k) => {
@@ -34,16 +38,6 @@ export function BubbleProps({ ids }: { ids: Id[] }) {
       };
     },
   };
-  // for the auto-outline checkbox, "get('stroke')" must reflect the resolved (possibly inherited) choice
-  const getRaw = src.get;
-  src.get = ((k: StyleKey) =>
-    k === 'stroke'
-      ? common(nodes, (n) =>
-          n.style.stroke !== undefined
-            ? n.style.stroke
-            : (doc.categories[n.categoryId ?? '']?.style ?? doc.settings.defaultStyle).stroke,
-        )
-      : getRaw(k)) as StyleSource['get'];
 
   return (
     <>

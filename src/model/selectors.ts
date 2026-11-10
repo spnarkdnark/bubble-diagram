@@ -14,11 +14,8 @@ export function baseStyle(node: Pick<BubbleNode, 'categoryId'>, project: Project
 
 /** Category/default style with the element's overrides applied; stroke resolved. */
 export function resolveStyle(node: BubbleNode, project: Project): ResolvedStyle {
-  const s: StyleProps = { ...baseStyle(node, project) };
-  for (const k of Object.keys(node.style) as StyleKey[]) {
-    const v = node.style[k];
-    if (v !== undefined) (s as any)[k] = v;
-  }
+  const overrides = Object.fromEntries(Object.entries(node.style).filter(([, v]) => v !== undefined));
+  const s: StyleProps = { ...baseStyle(node, project), ...overrides };
   return { ...s, stroke: s.stroke ?? darken(s.fill, AUTO_STROKE_DARKEN) };
 }
 

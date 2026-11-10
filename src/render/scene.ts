@@ -154,7 +154,9 @@ function circleSamples(r: number, ftPerPt: number): number {
   return Math.max(48, Math.min(240, Math.round(rPt * 1.2)));
 }
 
-// cache sketched geometry per node so unchanged bubbles are not recomputed while dragging others
+// Cache sketched geometry per node so unchanged bubbles are not recomputed while dragging others.
+// The key is the node's full visual input as JSON (not object identity): a shape's geometry
+// depends on the bubbles it hugs, so identity alone would miss changes.
 const nodeCache = new Map<Id, { key: string; scene: NodeScene }>();
 
 function nodeScene(

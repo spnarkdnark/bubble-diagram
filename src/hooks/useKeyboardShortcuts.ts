@@ -43,7 +43,8 @@ export function useKeyboardShortcuts(handlers: ShortcutHandlers = {}) {
 
       if (mod && key === 'z') {
         e.preventDefault();
-        e.shiftKey ? doc.redo() : doc.undo();
+        if (e.shiftKey) doc.redo();
+        else doc.undo();
         return;
       }
       if (mod && key === 'y') {
