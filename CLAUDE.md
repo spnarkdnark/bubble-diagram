@@ -7,7 +7,20 @@ react-konva canvas, Zustand + Immer state. No UI framework; plain CSS with token
 
 - `npm run dev` — dev server (http://localhost:5173)
 - `npm test` — Vitest unit tests (`tests/`, model/store/io only; no DOM)
-- `npm run typecheck` / `npm run build`
+- `npm run e2e` — Playwright browser tests (`e2e/`; starts its own dev server on 5199).
+  First time on a machine: `npx playwright install chromium`.
+- `npm run lint` (ESLint) / `npm run format` (Prettier) / `npm run typecheck` / `npm run build`
+- Before committing: typecheck, lint, format:check, `npm test`, `npm run e2e` all pass.
+- TypeScript is pinned to 5.9 (typescript-eslint does not support TS 7 yet).
+
+## Conventions
+
+- Prettier owns formatting (single quotes, 120 cols). Don't hand-format.
+- No `any` outside `model/migrate.ts` (untrusted JSON) and tests.
+- e2e tests read app state via `window.__bd` (dev builds only, set in `main.tsx`;
+  stripped from production). Prefer asserting on document state over pixels.
+- Edit with tools that fail loudly when text doesn't match; scripted find/replace
+  that silently no-ops has bitten this codebase before.
 
 ## The one rule: units
 
@@ -30,13 +43,19 @@ src/model/    pure TS, no React: types, units, geometry, color, defaults, factor
               selectors (resolveStyle etc.), migrate, overlaps (detection/arcs),
               blob (freeform shapes: geometry, ring snapping, building)
 src/store/    history.ts (pure undo stack), documentStore (undoable Project),
-              uiStore (selection/tool/view — NOT undoable), actions.ts (all ops),
-              workspaceStore (tabs)
+              uiStore (selection/tool/view — NOT undoable), workspaceStore (tabs),
+              actions/ (all document ops, one file per area: nodes, selection,
+              connections, categories, styles, settings, view, overlaps,
+              graphic, shapes; index.ts re-exports — import * as A from 'store/actions')
 src/render/   scene.ts (Project -> primitives, the ONE place visuals are decided),
               drawCanvas.ts, sketch.ts (hand-drawn geometry + presets),
               paper.ts (textures), fonts.ts (hand lettering, outlines for export)
-src/canvas/   CanvasStage (events, tools, zoom/pan), layers/GridLayer, hitTest,
-              textLayout (label wrapping shared with export), pointer
+src/canvas/   CanvasStage (stage + layers only), OverlayLayer (selection, handles,
+              previews), tools/ (select, bubble, connect, shape: Tool/Gesture
+              interface in tools/types.ts), input/useCanvasInput (pan, dispatch to
+              the active tool, cursor) + input/wheel, query.ts (hit testing,
+              snapping), overlayStore (marquee/stroke/snap hint), viewport.ts
+              (screen<->world), hitTest, textLayout, LabelEditor, layers/GridLayer
 src/ui/       Toolbar, ScaleBar, panels/ (properties, categories, settings),
               controls/ (shared inputs), ExportDialog, Toast
 src/io/       fileActions (New/Open/Save/Import CSV commands), projectFile (JSON),
@@ -44,7 +63,8 @@ src/io/       fileActions (New/Open/Save/Import CSV commands), projectFile (JSON
               autosave (localStorage), csvImport, autoLayout, download helpers,
               export/ (svg.ts is the single exporter; png/pdf build on it)
 src/hooks/    useKeyboardShortcuts
-tests/        Vitest
+tests/        Vitest unit tests
+e2e/          Playwright browser tests (helpers.ts: fixtures, window.__bd readers)
 ```
 
 ## Data model (src/model/types.ts)
@@ -148,9 +168,13 @@ content (`autoLayout.ts`). Sample: `examples/sample-program.csv`.
 
 - Unit tests cover units, geometry, history, project file + v1 migration, CSV,
   styles, clipboard, overlaps, sketch determinism, blob building/attachment.
-- Canvas hit-testing is geometric (`canvas/hitTest.ts`); Konva layers are
-  `listening={false}`. Pointer handling lives in `CanvasStage.tsx` (window-level
-  move/up so drags continue outside the canvas).
+- e2e (`e2e/*.spec.ts`, 15 tests) cover scale, drag/resize/wheel, selection + undo,
+  connections, sizing by area, in-place names, category styles, clipboard, overlaps,
+  shape drawing and point editing, tabs, CSV import and exports. Add one per feature.
+- Canvas hit-testing is geometric (`canvas/query.ts`, `canvas/hitTest.ts`); Konva layers
+  are `listening={false}`. Window-level move/up (input/useCanvasInput.ts) so drags
+  continue outside the canvas. To add a tool: implement `Tool` in canvas/tools/,
+  register it in tools/index.ts and the `Tool` union in uiStore.
 - jsPDF/svg2pdf are lazy-loaded on first PDF export.
 
 ## Out of scope for v1 (hooks left in place)
