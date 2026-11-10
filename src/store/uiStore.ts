@@ -6,6 +6,8 @@ export type Tool = 'select' | 'bubble' | 'connect';
 export interface Selection {
   nodes: Id[];
   connections: Id[];
+  /** overlap keys (see model/overlaps.overlapKey) */
+  overlaps: string[];
 }
 
 export interface View {
@@ -44,7 +46,7 @@ export const MAX_ZOOM = 32;
 
 export const useUi = create<UiState>((set) => ({
   tool: 'select',
-  selection: { nodes: [], connections: [] },
+  selection: { nodes: [], connections: [], overlaps: [] },
   connectFrom: null,
   view: { zoom: 1, panX: 0, panY: 0 },
   stageSize: { width: 800, height: 600 },
@@ -55,8 +57,8 @@ export const useUi = create<UiState>((set) => ({
 
   setTool: (tool) => set({ tool, connectFrom: null }),
   select: (sel) =>
-    set({ selection: { nodes: sel.nodes ?? [], connections: sel.connections ?? [] } }),
-  clearSelection: () => set({ selection: { nodes: [], connections: [] } }),
+    set({ selection: { nodes: sel.nodes ?? [], connections: sel.connections ?? [], overlaps: sel.overlaps ?? [] } }),
+  clearSelection: () => set({ selection: { nodes: [], connections: [], overlaps: [] } }),
   setConnectFrom: (connectFrom) => set({ connectFrom }),
   setView: (v) =>
     set((s) => {

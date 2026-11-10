@@ -5,6 +5,8 @@
 import type { BubbleNode, Category, Connection, Id, OverlapMode, Point, Project, StyleOverrides } from '../model/types';
 import { boundsCenter, nodeBounds, unionBounds } from '../model/geometry';
 import { createCategory, newId } from '../model/factory';
+import { overlapKey } from '../model/overlaps';
+export { overlapKey };
 
 export const CLIP_TYPE = 'bubble-diagram/clip';
 
@@ -17,10 +19,6 @@ export interface ClipPayload {
   overlaps: Record<string, { mode: OverlapMode }>;
   /** center of the copied content, feet */
   center: Point;
-}
-
-export function overlapKey(a: Id, b: Id): string {
-  return a < b ? `${a}|${b}` : `${b}|${a}`;
 }
 
 export function buildClip(project: Project, nodeIds: Id[]): ClipPayload | null {

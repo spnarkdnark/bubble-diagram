@@ -28,12 +28,35 @@ export interface LabelLayout {
 export const LINE_HEIGHT = 1.2;
 const SECONDARY_RATIO = 0.85;
 
+export interface LabelFont {
+  family: string;
+  upper: boolean;
+}
+
+const CLEAN_FONT: LabelFont = { family: LABEL_FONT_FAMILY, upper: false };
+
 let ctx: CanvasRenderingContext2D | null = null;
+const widthCache = new Map<string, number>();
+let family = LABEL_FONT_FAMILY;
+
+/** Forget cached text widths (call after a web font finishes loading). */
+export function clearTextMeasureCache() {
+  widthCache.clear();
+}
+
 function measure(text: string, sizePt: number, weight: number): number {
-  if (!ctx) ctx = document.createElement('canvas').getContext('2d');
-  if (!ctx) return text.length * sizePt * 0.55;
-  ctx.font = `${weight} ${sizePt}px ${LABEL_FONT_FAMILY}`;
-  return ctx.measureText(text).width;
+  const key = `${family}|${weight}|${text}`;
+  let w = widthCache.get(key);
+  if (w === undefined) {
+    if (!ctx && typeof document !== 'undefined') ctx = document.createElement('canvas').getContext('2d');
+    if (ctx) {
+      ctx.font = `${weight} 100px ${family}`;
+      w = ctx.measureText(text).width / 100;
+    } else w = text.length * 0.55;
+    if (widthCache.size > 20000) widthCache.clear();
+    widthCache.set(key, w);
+  }
+  return w * sizePt;
 }
 
 function wrap(text: string, sizePt: number, weight: number, maxWidth: number): string[] {
@@ -55,16 +78,24 @@ function wrap(text: string, sizePt: number, weight: number, maxWidth: number): s
   return out;
 }
 
-export function layoutLabel(node: BubbleNode, project: Project, style: ResolvedStyle = resolveStyle(node, project)): LabelLayout {
+export function layoutLabel(
+  node: BubbleNode,
+  project: Project,
+  style: ResolvedStyle = resolveStyle(node, project),
+  font: LabelFont = CLEAN_FONT,
+): LabelLayout {
   const scale = project.settings.scale;
+  family = font.family;
+  const name = font.upper ? node.name.toUpperCase() : node.name;
   const size = style.labelSizePt;
   const weight = style.labelBold ? 600 : 400;
   // wrap width: ~80% of the diameter on paper, but never narrower than a few characters
   const widthPt = Math.max(ftToPt(shapeSize(node.shape) * 2 * 0.8, scale), size * 4);
   const rows: Omit<LabelLine, 'topPt'>[] = [];
-  for (const t of wrap(node.name, size, weight, widthPt))
+  for (const t of wrap(name, size, weight, widthPt))
     rows.push({ text: t, sizePt: size, weight, secondary: false, color: style.labelColor, heightPt: size * LINE_HEIGHT });
   const sec = secondaryLabel(node, project, style);
+  family = font.family;
   if (sec) {
     const s = size * SECONDARY_RATIO;
     rows.push({ text: sec, sizePt: s, weight: 400, secondary: true, color: SECONDARY_LABEL_COLOR, heightPt: s * LINE_HEIGHT });

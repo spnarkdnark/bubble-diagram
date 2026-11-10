@@ -6,6 +6,7 @@ export type Hit =
   | { kind: 'handle'; id: Id }
   | { kind: 'node'; id: Id }
   | { kind: 'connection'; id: Id }
+  | { kind: 'overlap'; key: string }
   | { kind: 'empty' };
 
 function distToSegment(p: Point, a: Point, b: Point): number {
@@ -34,18 +35,25 @@ export function topNodeAt(project: Project, p: Point): Id | null {
  * @param tolFt hit tolerance in feet (screen px / stage scale)
  * @param handleFor node id showing a resize handle (single selection), if any
  */
-export function hitTest(project: Project, p: Point, tolFt: number, handleFor: Id | null): Hit {
+export function hitTest(
+  project: Project,
+  p: Point,
+  tolFt: number,
+  handleFor: Id | null,
+  markers: { key: string; marker: Point }[] = [],
+): Hit {
   if (handleFor) {
     const h = handlePosition(project, handleFor);
     if (h && Math.hypot(p.x - h.x, p.y - h.y) <= tolFt * 1.2) return { kind: 'handle', id: handleFor };
   }
+  for (const m of markers) if (Math.hypot(p.x - m.marker.x, p.y - m.marker.y) <= tolFt * 1.1) return { kind: 'overlap', key: m.key };
   const node = topNodeAt(project, p);
   if (node) return { kind: 'node', id: node };
   for (const c of Object.values(project.connections)) {
     const a = project.nodes[c.from];
     const b = project.nodes[c.to];
     if (!a || !b) continue;
-    const seg = connectionSegment(a, b);
+    const seg = connectionSegment(a, b, project);
     if (seg && distToSegment(p, seg[0], seg[1]) <= tolFt) return { kind: 'connection', id: c.id };
   }
   return { kind: 'empty' };

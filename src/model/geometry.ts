@@ -95,7 +95,7 @@ export function boundaryPoint(node: BubbleNode, toward: Point): Point {
  * Edge-to-edge segment between two nodes. Returns null when the shapes
  * overlap so much that there is no visible gap.
  */
-export function connectionSegment(a: BubbleNode, b: BubbleNode): [Point, Point] | null {
+export function connectionSegment(a: BubbleNode, b: BubbleNode, _project?: Project): [Point, Point] | null {
   const p1 = boundaryPoint(a, b);
   const p2 = boundaryPoint(b, a);
   const dist = Math.hypot(b.x - a.x, b.y - a.y);

@@ -2,7 +2,9 @@ import { useDoc } from '../../store/documentStore';
 import * as A from '../../store/actions';
 import { totalArea } from '../../model/selectors';
 import { formatArea, formatLengthCompact } from '../../model/units';
-import { Field, ReadOnly, Section, SelectField, TextField } from '../controls/Controls';
+import { Field, NumberField, ReadOnly, Section, SelectField, TextField } from '../controls/Controls';
+import { findOverlaps, OVERLAP_MODE_LABELS } from '../../model/overlaps';
+import type { OverlapColor, OverlapMode, OverlapSettings } from '../../model/types';
 
 const SNAP_OPTIONS = [
   { value: String(1 / 12), label: '1"' },
@@ -32,9 +34,57 @@ export function DrawingPanel() {
         <Field label="Connections">
           <ReadOnly value={String(Object.keys(doc.connections).length)} />
         </Field>
+        <Field label="Overlaps" hint="Overlapping bubbles count as direct relationships">
+          <ReadOnly value={`${findOverlaps(doc).length} direct`} />
+        </Field>
         <Field label="Total area">
           <ReadOnly value={formatArea(totalArea(doc))} />
         </Field>
+      </Section>
+      <Section title="Overlaps">
+        <Field label="Treatment">
+          <SelectField<OverlapMode>
+            value={doc.settings.overlap.mode}
+            options={(Object.keys(OVERLAP_MODE_LABELS) as OverlapMode[]).map((m) => ({ value: m, label: OVERLAP_MODE_LABELS[m] }))}
+            onChange={(v) => A.setOverlapSettings({ mode: v })}
+          />
+        </Field>
+        <Field label="Line weight">
+          <NumberField
+            value={doc.settings.overlap.weightPt}
+            format={(v) => `${+v.toFixed(2)} pt`}
+            parse={(s) => (Number.isFinite(parseFloat(s)) ? parseFloat(s) : null)}
+            step={0.25}
+            min={0.25}
+            max={12}
+            onCommit={(v) => A.setOverlapSettings({ weightPt: v })}
+          />
+        </Field>
+        <Field label="Line color">
+          <SelectField<OverlapColor>
+            value={doc.settings.overlap.color}
+            options={[
+              { value: 'largest', label: 'Larger bubble' },
+              { value: 'blend', label: 'Blend of both' },
+              { value: 'dark', label: 'Dark' },
+            ]}
+            onChange={(v) => A.setOverlapSettings({ color: v })}
+          />
+        </Field>
+        {doc.settings.overlap.mode === 'merge' && (
+          <Field label="Inner arcs">
+            <SelectField<OverlapSettings['innerArcs']>
+              value={doc.settings.overlap.innerArcs}
+              options={[
+                { value: 'hidden', label: 'Hidden' },
+                { value: 'thin', label: 'Thin line' },
+                { value: 'dashed', label: 'Dashed' },
+              ]}
+              onChange={(v) => A.setOverlapSettings({ innerArcs: v })}
+            />
+          </Field>
+        )}
+        <p className="tip flush">Select a bubble to set individual overlaps, or click an overlap's ◇ marker.</p>
       </Section>
       <Section title="Shortcuts">
         <dl className="shortcuts">

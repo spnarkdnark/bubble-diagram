@@ -4,11 +4,11 @@
  * paper points (1/72"), so stroke weights and font sizes map 1:1.
  */
 import type { Bounds, Project } from '../../model/types';
-import { connectionSegment, nodeBounds, unionBounds } from '../../model/geometry';
-import { connectionsList, orderedNodes, resolveStyle } from '../../model/selectors';
-import { CONNECTION_COLOR, CONNECTION_STYLES, dashPatternPt, LABEL_FONT_FAMILY } from '../../model/defaults';
+import type { Id } from '../../model/types';
+import { nodeBounds, unionBounds } from '../../model/geometry';
+import { LABEL_FONT_FAMILY } from '../../model/defaults';
 import { ftToPt, getScale, niceScaleBarFt, PT_PER_IN, scaleBarSegments } from '../../model/units';
-import { layoutLabel } from '../../canvas/textLayout';
+import { buildScene, type Prim, type StrokeP } from '../../render/scene';
 
 export interface ExportOptions {
   includeGrid: boolean;
@@ -32,6 +32,48 @@ const esc = (s: string) =>
 const n = (v: number) => +v.toFixed(3);
 const FOOTER_PT = 40;
 
+/** Project restricted to some nodes (and the connections/overlaps among them). */
+function subsetProject(project: Project, ids: Set<Id>): Project {
+  if (ids.size === project.nodeOrder.length) return project;
+  return {
+    ...project,
+    nodes: Object.fromEntries(Object.entries(project.nodes).filter(([id]) => ids.has(id))),
+    nodeOrder: project.nodeOrder.filter((id) => ids.has(id)),
+    connections: Object.fromEntries(Object.entries(project.connections).filter(([, c]) => ids.has(c.from) && ids.has(c.to))),
+  };
+}
+
+function strokeAttrs(s: StrokeP, k: number): string {
+  return ` stroke="${s.color}"${s.alpha < 1 ? ` stroke-opacity="${n(s.alpha)}"` : ''} stroke-width="${n(s.width * k)}"${
+    s.dash ? ` stroke-dasharray="${n(s.dash[0] * k)} ${n(s.dash[1] * k)}"` : ''
+  }${s.cap !== 'butt' ? ` stroke-linecap="${s.cap}"` : ''} stroke-linejoin="round"`;
+}
+
+function primSvg(p: Prim, X: (ft: number) => number, Y: (ft: number) => number, k: number): string {
+  const fill = (f?: { color: string; alpha: number }) =>
+    f ? ` fill="${f.color}"${f.alpha < 1 ? ` fill-opacity="${n(f.alpha)}"` : ''}` : ' fill="none"';
+  const stroke = (s?: StrokeP) => (s ? strokeAttrs(s, k) : '');
+  switch (p.t) {
+    case 'circle':
+      return `<circle cx="${n(X(p.cx))}" cy="${n(Y(p.cy))}" r="${n(p.r * k)}"${fill(p.fill)}${stroke(p.stroke)}/>`;
+    case 'arc': {
+      const span = p.a1 - p.a0;
+      if (span >= Math.PI * 2 - 1e-6) return `<circle cx="${n(X(p.cx))}" cy="${n(Y(p.cy))}" r="${n(p.r * k)}" fill="none"${stroke(p.stroke)}/>`;
+      const x0 = X(p.cx + Math.cos(p.a0) * p.r);
+      const y0 = Y(p.cy + Math.sin(p.a0) * p.r);
+      const x1 = X(p.cx + Math.cos(p.a1) * p.r);
+      const y1 = Y(p.cy + Math.sin(p.a1) * p.r);
+      const r = n(p.r * k);
+      return `<path d="M${n(x0)} ${n(y0)}A${r} ${r} 0 ${span > Math.PI ? 1 : 0} 1 ${n(x1)} ${n(y1)}" fill="none"${stroke(p.stroke)}/>`;
+    }
+    case 'path': {
+      if (p.pts.length < 2) return '';
+      const d = 'M' + p.pts.map((q) => `${n(X(q.x))} ${n(Y(q.y))}`).join('L') + (p.closed ? 'Z' : '');
+      return `<path d="${d}"${fill(p.fill)}${stroke(p.stroke)}/>`;
+    }
+  }
+}
+
 export function contentBounds(project: Project, nodeIds?: string[]): Bounds | null {
   const ids = nodeIds ?? project.nodeOrder;
   return unionBounds(ids.map((id) => project.nodes[id]).filter(Boolean).map((n) => nodeBounds(n, project)));
@@ -52,7 +94,8 @@ export function buildSvg(project: Project, opts: ExportOptions = DEFAULT_EXPORT_
   const H = drawH + m * 2 + footer;
 
   const ids = new Set(opts.nodeIds ?? project.nodeOrder);
-  const nodes = orderedNodes(project).filter((nd) => ids.has(nd.id));
+  const scene = buildScene(subsetProject(project, ids));
+  const k = toPt(1); // pt per ft
   const out: string[] = [];
   out.push(
     `<svg xmlns="http://www.w3.org/2000/svg" width="${n(W / PT_PER_IN)}in" height="${n(H / PT_PER_IN)}in" viewBox="0 0 ${n(W)} ${n(H)}">`,
@@ -71,48 +114,25 @@ export function buildSvg(project: Project, opts: ExportOptions = DEFAULT_EXPORT_
     out.push(`<path d="${parts.join('')}" fill="none" stroke="#e3e5e8" stroke-width="0.25"/>`);
   }
 
-  out.push('<g id="connections">');
-  for (const c of connectionsList(project)) {
-    const a = project.nodes[c.from];
-    const b = project.nodes[c.to];
-    if (!a || !b || !ids.has(a.id) || !ids.has(b.id)) continue;
-    const seg = connectionSegment(a, b);
-    if (!seg) continue;
-    const st = CONNECTION_STYLES[c.type];
-    const dp = dashPatternPt(st.style, st.weightPt);
-    const dash = dp ? ` stroke-dasharray="${dp.join(' ')}"` : '';
-    out.push(
-      `<line x1="${n(X(seg[0].x))}" y1="${n(Y(seg[0].y))}" x2="${n(X(seg[1].x))}" y2="${n(Y(seg[1].y))}" stroke="${CONNECTION_COLOR}" stroke-width="${st.weightPt}"${dash}/>`,
-    );
-  }
-  out.push('</g>');
-
+  const prims = (list: Prim[]) => list.map((p) => primSvg(p, X, Y, k)).join('');
+  out.push(`<g id="connections">${prims(scene.connections)}</g>`);
   out.push('<g id="bubbles">');
-  for (const nd of nodes) {
-    const cx = X(nd.x);
-    const cy = Y(nd.y);
-    const st = resolveStyle(nd, project);
-    const dp = dashPatternPt(st.strokeStyle, st.strokeWeightPt);
-    const stroke =
-      st.strokeWeightPt > 0
-        ? ` stroke="${st.stroke}" stroke-width="${st.strokeWeightPt}"${dp ? ` stroke-dasharray="${dp.join(' ')}"` : ''}${
-            st.strokeStyle === 'dotted' ? ' stroke-linecap="round"' : ''
-          }`
-        : '';
-    out.push(`<g id="bubble-${esc(nd.id)}">`);
-    out.push(
-      `<circle cx="${n(cx)}" cy="${n(cy)}" r="${n(toPt(nd.shape.radiusFt))}" fill="${st.fill}" fill-opacity="${st.fillOpacity}"${stroke}/>`,
-    );
-    for (const l of layoutLabel(nd, project, st).lines) {
-      // approximate vertical centering of the glyphs within the line box
+  for (const ns of scene.nodes) out.push(`<g id="bubble-${esc(ns.id)}">${prims(ns.fill)}${prims(ns.outline)}</g>`);
+  out.push('</g>');
+  out.push(`<g id="overlaps">${prims(scene.overlays)}</g>`);
+  out.push('<g id="labels">');
+  for (const ns of scene.nodes) {
+    if (!ns.label) continue;
+    const cx = X(ns.label.x);
+    const cy = Y(ns.label.y);
+    for (const l of ns.label.layout.lines) {
       const baseline = cy + l.topPt + l.heightPt / 2 + l.sizePt * 0.35;
       out.push(
-        `<text x="${n(cx)}" y="${n(baseline)}" text-anchor="middle" font-family="${LABEL_FONT_FAMILY}" font-size="${n(l.sizePt)}"${
+        `<text x="${n(cx)}" y="${n(baseline)}" text-anchor="middle" font-family="${esc(ns.label.fontFamily)}" font-size="${n(l.sizePt)}"${
           l.weight === 600 ? ' font-weight="bold"' : ''
         } fill="${l.color}">${esc(l.text)}</text>`,
       );
     }
-    out.push('</g>');
   }
   out.push('</g>');
 

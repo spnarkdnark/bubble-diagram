@@ -134,3 +134,5 @@ kbd { font-family: var(--mono); font-size: 11px; border: 1px solid var(--line-st
 .chev:hover { background: #f1f1ef; color: var(--text); }
 .chev.open { color: var(--accent); }
 .dim { color: var(--muted); font-style: italic; padding-left: 4px; flex: 1; }
+.tip.flush { padding: 0; }
+.ellipsis { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }

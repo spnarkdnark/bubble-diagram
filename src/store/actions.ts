@@ -12,6 +12,8 @@ import type {
   ScaleId,
   StyleKey,
   StyleProps,
+  OverlapMode,
+  OverlapSettings,
 } from '../model/types';
 import { createCategory, createConnection, createNode, newId, nextCategoryColor } from '../model/factory';
 import { findConnection, resolveStyle } from '../model/selectors';
@@ -67,8 +69,9 @@ export function installSelectionPruning() {
     const sel = ui().selection;
     const nodes = sel.nodes.filter((id) => d.nodes[id]);
     const connections = sel.connections.filter((id) => d.connections[id]);
-    if (nodes.length !== sel.nodes.length || connections.length !== sel.connections.length)
-      ui().select({ nodes, connections });
+    const overlaps = sel.overlaps.filter((k) => k.split('|').every((id) => d.nodes[id]));
+    if (nodes.length !== sel.nodes.length || connections.length !== sel.connections.length || overlaps.length !== sel.overlaps.length)
+      ui().select({ nodes, connections, overlaps });
     const cf = ui().connectFrom;
     if (cf && !d.nodes[cf]) ui().setConnectFrom(null);
   });
@@ -136,6 +139,7 @@ export function deleteSelection() {
     for (const c of Object.values(d.connections)) {
       if (connections.includes(c.id) || nodeSet.has(c.from) || nodeSet.has(c.to)) delete d.connections[c.id];
     }
+    for (const k of Object.keys(d.overlaps)) if (k.split('|').some((id) => nodeSet.has(id))) delete d.overlaps[k];
   });
   ui().clearSelection();
 }
@@ -351,4 +355,25 @@ export function setSnapIncrement(ft: number) {
   commit((d) => {
     d.settings.snap.radiusIncrementFt = ft;
   });
+}
+
+// ---------- overlaps ----------
+
+/** Override the treatment of specific overlaps; null returns them to the drawing default. */
+export function setOverlapMode(keys: string[], mode: OverlapMode | null) {
+  commit((d) => {
+    for (const k of keys) {
+      if (mode === null) delete d.overlaps[k];
+      else d.overlaps[k] = { mode };
+    }
+  });
+}
+
+export function setOverlapSettings(patch: Partial<OverlapSettings>) {
+  commit(
+    (d) => {
+      Object.assign(d.settings.overlap, patch);
+    },
+    { coalesceKey: `overlap:${Object.keys(patch).join(',')}` },
+  );
 }

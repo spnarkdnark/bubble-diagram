@@ -1,15 +1,15 @@
-import { useEffect, useRef, useState } from 'react';
-import { Circle, Layer, Line, Rect, Stage, Label, Tag, Text } from 'react-konva';
+import { useEffect, useMemo, useRef, useState } from 'react';
+import { Circle, Layer, Line, Rect, Stage, Label, Tag, Text, Shape } from 'react-konva';
 import type { Bounds, Id, Point } from '../model/types';
-import { orderedNodes, resolveStyle } from '../model/selectors';
-import { boundaryPoint, shapeSize, withSize } from '../model/geometry';
+import { orderedNodes } from '../model/selectors';
+import { boundaryPoint, connectionSegment, shapeSize, withSize } from '../model/geometry';
 import { MIN_RADIUS_FT } from '../model/defaults';
 import { formatFeetInches, pxPerFt, snap } from '../model/units';
 import { getDoc, useDoc, useDocument } from '../store/documentStore';
 import { useUi } from '../store/uiStore';
 import * as A from '../store/actions';
-import { BubbleShape } from './shapes/BubbleShape';
-import { ConnectionLine } from './shapes/ConnectionLine';
+import { buildScene } from '../render/scene';
+import { drawLabels, drawPrims } from '../render/drawCanvas';
 import { GridLayer } from './layers/GridLayer';
 import { handlePosition, hitTest, topNodeAt } from './hitTest';
 import { pointer } from './pointer';
@@ -44,12 +44,16 @@ export function CanvasStage() {
   const [marquee, setMarquee] = useState<Bounds | null>(null);
   const [pointerWorld, setPointerWorld] = useState<Point | null>(null);
   const interaction = useRef<Interaction>({ kind: 'none' });
+  const sceneRef = useRef<ReturnType<typeof buildScene> | null>(null);
   const wheelAcc = useRef(0);
   const readoutTimer = useRef<number>(0);
 
   const k = pxPerFt(doc.settings.scale, view.zoom);
   const selectedNodes = new Set(selection.nodes);
   const selectedConns = new Set(selection.connections);
+  const selectedOverlaps = new Set(selection.overlaps);
+  const scene = useMemo(() => buildScene(doc), [doc]);
+  sceneRef.current = scene;
   const handleFor = tool === 'select' && selection.nodes.length === 1 ? selection.nodes[0] : null;
 
   // ---- sizing ----
@@ -82,6 +86,14 @@ export function CanvasStage() {
     const ui = useUi.getState();
     return ui.tool === 'select' && ui.selection.nodes.length === 1 ? ui.selection.nodes[0] : null;
   };
+  /** overlap markers currently shown (either bubble or the overlap itself selected) */
+  const visibleMarkers = () => {
+    const sel = useUi.getState().selection;
+    return (sceneRef.current?.overlaps ?? []).filter(
+      (o) => sel.overlaps.includes(o.key) || sel.nodes.includes(o.a) || sel.nodes.includes(o.b),
+    );
+  };
+  const hitAt = (p: Point) => hitTest(getDoc(), p, HIT_TOL_PX / currentK(), currentHandleFor(), visibleMarkers());
 
   // ---- mouse down ----
   const onMouseDown = (e: React.MouseEvent) => {
@@ -95,7 +107,7 @@ export function CanvasStage() {
     if (e.button !== 0) return;
     const doc = getDoc();
     const p = toWorld(e.clientX, e.clientY);
-    const hit = hitTest(doc, p, HIT_TOL_PX / currentK(), currentHandleFor());
+    const hit = hitAt(p);
 
     if (ui.tool === 'bubble') {
       A.addNode(p);
@@ -143,6 +155,9 @@ export function CanvasStage() {
       }
       case 'connection':
         A.selectConnection(hit.id, e.shiftKey);
+        break;
+      case 'overlap':
+        ui.select({ overlaps: [hit.key] });
         break;
       case 'empty':
         if (!e.shiftKey) ui.clearSelection();
@@ -270,11 +285,11 @@ export function CanvasStage() {
     if (ui.tool === 'bubble') return void (el.style.cursor = 'copy');
     const r = el.getBoundingClientRect();
     if (e.clientX < r.left || e.clientX > r.right || e.clientY < r.top || e.clientY > r.bottom) return;
-    const hit = hitTest(getDoc(), toWorld(e.clientX, e.clientY), HIT_TOL_PX / currentK(), currentHandleFor());
+    const hit = hitAt(toWorld(e.clientX, e.clientY));
     el.style.cursor =
       ui.tool === 'connect'
         ? hit.kind === 'node' ? 'crosshair' : 'default'
-        : hit.kind === 'handle' ? 'ew-resize' : hit.kind === 'node' ? 'move' : hit.kind === 'connection' ? 'pointer' : 'default';
+        : hit.kind === 'handle' ? 'ew-resize' : hit.kind === 'node' ? 'move' : hit.kind === 'connection' || hit.kind === 'overlap' ? 'pointer' : 'default';
   };
   useEffect(() => {
     const el = containerRef.current;
@@ -356,21 +371,46 @@ export function CanvasStage() {
           />
         )}
         <Layer listening={false}>
-          {Object.values(doc.connections).map((c) => {
-            const a = doc.nodes[c.from];
-            const b = doc.nodes[c.to];
-            if (!a || !b) return null;
-            return (
-              <ConnectionLine key={c.id} a={a} b={b} type={c.type} scale={doc.settings.scale} selected={selectedConns.has(c.id)} k={k} />
-            );
-          })}
+          <Shape
+            listening={false}
+            sceneFunc={(c) => {
+              const ctx = c._context as CanvasRenderingContext2D;
+              drawPrims(ctx, scene.connections);
+              for (const n of scene.nodes) {
+                drawPrims(ctx, n.fill);
+                drawPrims(ctx, n.outline);
+              }
+              drawPrims(ctx, scene.overlays);
+              drawLabels(ctx, scene.nodes.flatMap((n) => (n.label ? [n.label] : [])), k, scene.ftPerPt);
+            }}
+          />
         </Layer>
         <Layer listening={false}>
-          {nodes.map((n) => (
-            <BubbleShape key={n.id} node={n} style={resolveStyle(n, doc)} project={doc} k={k} />
-          ))}
-        </Layer>
-        <Layer listening={false}>
+          {Object.values(doc.connections)
+            .filter((c) => selectedConns.has(c.id))
+            .map((c) => {
+              const seg = doc.nodes[c.from] && doc.nodes[c.to] ? connectionSegment(doc.nodes[c.from], doc.nodes[c.to], doc) : null;
+              return seg ? (
+                <Line key={c.id} points={[seg[0].x, seg[0].y, seg[1].x, seg[1].y]} stroke={ACCENT} opacity={0.45} strokeWidth={6 / k} lineCap="round" />
+              ) : null;
+            })}
+          {scene.overlaps
+            .filter((o) => selectedOverlaps.has(o.key) || selectedNodes.has(o.a) || selectedNodes.has(o.b))
+            .map((o) => (
+              <Rect
+                key={o.key}
+                x={o.marker.x}
+                y={o.marker.y}
+                offsetX={5 / k}
+                offsetY={5 / k}
+                width={10 / k}
+                height={10 / k}
+                rotation={45}
+                fill={selectedOverlaps.has(o.key) ? ACCENT : '#fff'}
+                stroke={ACCENT}
+                strokeWidth={1.5 / k}
+              />
+            ))}
           {nodes
             .filter((n) => selectedNodes.has(n.id) || n.id === connectFrom)
             .map((n) => (
