@@ -10,6 +10,7 @@ import { useKeyboardShortcuts } from './hooks/useKeyboardShortcuts';
 import { installSelectionPruning } from './store/actions';
 import { installAutosave } from './io/autosave';
 import { installClipboard } from './io/clipboardActions';
+import { installStandardsSync } from './store/workspaceStore';
 import { openProject, saveProject } from './io/fileActions';
 
 const shortcutHandlers = { save: saveProject, open: openProject };
@@ -18,6 +19,7 @@ export function App() {
   useEffect(() => installSelectionPruning(), []);
   useEffect(() => installAutosave(), []);
   useEffect(() => installClipboard(), []);
+  useEffect(() => installStandardsSync(), []);
   useKeyboardShortcuts(shortcutHandlers);
   return (
     <div className="app">

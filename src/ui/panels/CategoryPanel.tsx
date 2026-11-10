@@ -28,13 +28,14 @@ export function CategoryPanel() {
 
   return (
     <Section
-      title="Categories"
+      title="Category standards"
       actions={
         <button className="btn ghost small" onClick={() => setOpen(A.addCategory())}>
           + Add
         </button>
       }
     >
+      <p className="tip flush">Shared by every tab. Changes here apply to all open diagrams and new ones.</p>
       <ul className="category-list">
         {doc.categoryOrder.map((id) => {
           const c = doc.categories[id];

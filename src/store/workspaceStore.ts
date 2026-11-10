@@ -10,6 +10,8 @@ import * as H from './history';
 import { useDocument } from './documentStore';
 import { useUi, type Selection, type View } from './uiStore';
 import { zoomToFit } from './actions';
+import { adoptProject, applyStandards, hasStandards, standardsOf, type Standards } from '../model/standards';
+import { getStandards, setStandards } from './standardsStore';
 
 export interface TabState {
   history: H.HistoryState<Project>;
@@ -93,7 +95,8 @@ export function switchTab(id: Id) {
 }
 
 /** Open a new tab (after the active one) with `project`, or a blank diagram. */
-export function newTab(project: Project = createProject(nextUntitledName()), view: View = freshView()): Id {
+export function newTab(incoming: Project = createProject(nextUntitledName()), view: View = freshView()): Id {
+  const { project } = adoptIntoStandards(incoming);
   const ws = useWorkspace.getState();
   useDocument.getState().cancelGesture();
   const id = newId();
@@ -158,10 +161,23 @@ export function renameTab(id: Id, name: string) {
 }
 
 /** Replace all tabs (used when restoring the saved workspace at startup). */
-export function restoreWorkspace(tabs: { project: Project; view?: View }[], activeIndex: number) {
-  if (tabs.length === 0) return;
-  const ids = tabs.map(() => newId());
-  const a = Math.max(0, Math.min(activeIndex, tabs.length - 1));
+export function restoreWorkspace(
+  saved: { project: Project; view?: View }[],
+  activeIndex: number,
+  standards?: Standards,
+) {
+  if (saved.length === 0) return;
+  const ids = saved.map(() => newId());
+  const a = Math.max(0, Math.min(activeIndex, saved.length - 1));
+  // every tab follows one set of standards: the saved ones, or (first run) the active tab's
+  let s = standards ?? standardsOf(saved[a].project);
+  const tabs = saved.map((t) => {
+    const adopted = adoptProject(t.project, s);
+    s = adopted.standards;
+    return { ...t, project: adopted.project };
+  });
+  setStandards(s);
+  tabs.forEach((t, i) => (tabs[i] = { ...t, project: applyStandards(t.project, s) }));
   const parked: Record<Id, TabState> = {};
   tabs.forEach((t, i) => {
     if (i !== a)
@@ -174,4 +190,55 @@ export function restoreWorkspace(tabs: { project: Project; view?: View }[], acti
   useWorkspace.setState({ order: ids, activeId: ids[a], parked, lastClosed: null });
   useDocument.setState({ history: H.initHistory(tabs[a].project), gestureBase: null });
   if (tabs[a].view) useUi.getState().setView(tabs[a].view);
+}
+
+// ------------------------------------------------------------------ standards
+
+function mapHistory(h: H.HistoryState<Project>, s: Standards): H.HistoryState<Project> {
+  const f = (p: Project) => applyStandards(p, s);
+  return { ...h, past: h.past.map(f), present: f(h.present), future: h.future.map(f) };
+}
+
+/**
+ * Make `s` the standards in every tab. Other tabs get their whole undo history
+ * rewritten, so undoing there can never bring back an old category style.
+ * The active tab keeps its history when the change came from it (its own undo
+ * should still be able to revert the edit it made).
+ */
+export function setStandardsEverywhere(s: Standards, { fromActiveTab = false } = {}) {
+  setStandards(s);
+  const ws = useWorkspace.getState();
+  const parked: Record<Id, TabState> = {};
+  for (const [id, t] of Object.entries(ws.parked)) parked[id] = { ...t, history: mapHistory(t.history, s) };
+  const lastClosed = ws.lastClosed && {
+    ...ws.lastClosed,
+    state: { ...ws.lastClosed.state, history: mapHistory(ws.lastClosed.state.history, s) },
+  };
+  useWorkspace.setState({ parked, lastClosed });
+  const doc = useDocument.getState();
+  if (!fromActiveTab && !hasStandards(doc.history.present, s))
+    useDocument.setState({ history: mapHistory(doc.history, s) });
+}
+
+/** Bring an incoming project under the standards (adding any categories it brings). */
+export function adoptIntoStandards(p: Project): { project: Project; restyled: number } {
+  const before = getStandards();
+  const { project, standards, restyled } = adoptProject(p, before);
+  if (standards !== before) setStandardsEverywhere(standards);
+  return { project, restyled };
+}
+
+/** Category edits in the active tab become the standards for all tabs. */
+export function installStandardsSync(): () => void {
+  return useDocument.subscribe((st, prev) => {
+    const p = st.history.present;
+    if (st.gestureBase || p === prev.history.present || hasStandards(p, getStandards())) return;
+    const q = prev.history.present;
+    const changed =
+      p.categories !== q.categories ||
+      p.categoryOrder !== q.categoryOrder ||
+      p.settings.defaultStyle !== q.settings.defaultStyle;
+    // a tab switch swaps in a document that already carries the standards (handled above)
+    if (changed) setStandardsEverywhere(standardsOf(p), { fromActiveTab: true });
+  });
 }

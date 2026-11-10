@@ -104,6 +104,21 @@ Inactive tabs are parked (`parked[id] = {history, view, selection}`) and swapped
 project + view under `bubble-diagram:workspace:v1` (migrates the old single-doc key);
 undo history is per tab and in memory only. Closed tabs can be reopened from the toast.
 
+## Category standards
+
+Categories + the uncategorized default style are ONE shared library for all tabs
+(`model/standards.ts` pure logic, `store/standardsStore.ts` current value, sync in
+`workspaceStore.ts`). Each Project still stores a copy (files stay self-contained).
+
+- Editing categories in the active tab → `installStandardsSync` makes them the standards
+  and `setStandardsEverywhere` rewrites every other tab's whole undo history, so undo in
+  another tab can never restore an old category style. The editing tab keeps its own
+  history (its undo can revert its edit, which then propagates).
+- New tabs, opened files and restored tabs go through `adoptProject`: match by id, then
+  by name; the standards' styles win; unknown categories join the standards.
+- Autosave stores the standards with the workspace (`standards` field).
+- The sketch/graphic style (`settings.graphic`) is still per diagram.
+
 ## State & undo conventions
 
 - Every document change goes through `useDocument.commit(recipe, {coalesceKey?})`

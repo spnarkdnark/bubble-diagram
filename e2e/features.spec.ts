@@ -178,3 +178,42 @@ test('drag from one bubble to another connects them', async ({ page, canvas }) =
   await canvas.drag([300, 300], [700, 300]);
   expect(Object.keys((await doc(page)).connections)).toHaveLength(1);
 });
+
+test('category styles are shared standards across tabs, and undo elsewhere cannot revert them', async ({
+  page,
+  canvas,
+}) => {
+  const publicStyle = async () => {
+    const d = await doc(page);
+    return (Object.values(d.categories) as any[]).find((c) => c.name === 'Public').style;
+  };
+  const setPublicWeight = async (pt: string) => {
+    const row = page.locator('.category-list > li').nth(0);
+    if ((await page.locator('.category-style').count()) === 0) await row.locator('.chev').click();
+    const weight = page.locator('.category-style .field:has-text("Weight") input');
+    await weight.fill(pt);
+    await weight.press('Enter');
+  };
+  await canvas.bubble(400, 300); // tab 1 has an undoable edit in its history
+  await canvas.click(1000, 700);
+  await setPublicWeight('3');
+  // a new tab starts with the standard
+  await page.locator('.tab-new').click();
+  expect((await publicStyle()).strokeWeightPt).toBe(3);
+  // change it in tab 2 ...
+  await setPublicWeight('5');
+  // ... tab 1 follows, and undoing tab 1's own edits never brings back 3 pt
+  await page.locator('.tab').nth(0).click();
+  expect((await publicStyle()).strokeWeightPt).toBe(5);
+  await page.keyboard.press('Control+z');
+  await page.keyboard.press('Control+z');
+  await page.keyboard.press('Control+z');
+  expect((await publicStyle()).strokeWeightPt).toBe(5);
+  // standards survive a reload
+  await page.waitForTimeout(700);
+  await page.reload();
+  await page.waitForSelector('.canvas canvas');
+  expect((await publicStyle()).strokeWeightPt).toBe(5);
+  await page.locator('.tab-new').click();
+  expect((await publicStyle()).strokeWeightPt).toBe(5);
+});

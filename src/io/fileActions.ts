@@ -1,7 +1,7 @@
 /** High-level file commands used by the toolbar and shortcuts. */
 import { getDoc, useDocument } from '../store/documentStore';
 import { useUi } from '../store/uiStore';
-import { newTab } from '../store/workspaceStore';
+import { adoptIntoStandards, newTab } from '../store/workspaceStore';
 import { selectNodes, viewCenterWorld, zoomToFit } from '../store/actions';
 import { pickFile } from './download';
 import { buildImport, parseCsv } from './csvImport';
@@ -18,13 +18,19 @@ export async function openProject() {
   try {
     const p = await openProjectFile();
     if (!p) return;
+    // categories follow your standards: matched by name, standards' styles win
+    const { project, restyled } = adoptIntoStandards(p);
     // like a browser: reuse the current tab only when it is still empty
     if (getDoc().nodeOrder.length === 0) {
-      useDocument.getState().replace(p, true);
+      useDocument.getState().replace(project, true);
       useUi.getState().clearSelection();
-    } else newTab(p);
+    } else newTab(project);
     requestAnimationFrame(zoomToFit);
-    toast(`Opened “${p.meta.name}”`);
+    toast(
+      restyled
+        ? `Opened “${p.meta.name}”. ${restyled} categor${restyled > 1 ? 'ies follow' : 'y follows'} your standard styles.`
+        : `Opened “${p.meta.name}”`,
+    );
   } catch (e) {
     toast(`Could not open file: ${(e as Error).message}`);
   }
