@@ -6,11 +6,11 @@ react-konva canvas, Zustand + Immer state. No UI framework; plain CSS with token
 ## Commands
 
 - `npm run dev` — dev server (http://localhost:5173)
-- `npm test` — Vitest unit tests (`tests/`, model/store/io only; no DOM)
+- `npm test` — Vitest unit tests (`tests/`, model/store/io/render; no DOM)
 - `npm run e2e` — Playwright browser tests (`e2e/`; starts its own dev server on 5199).
   First time on a machine: `npx playwright install chromium`.
 - `npm run lint` (ESLint) / `npm run format` (Prettier) / `npm run typecheck` / `npm run build`
-- Before committing: typecheck, lint, format:check, `npm test`, `npm run e2e` all pass.
+- Before committing: typecheck, lint, `npm run format:check`, `npm test`, `npm run e2e` all pass.
 - TypeScript is pinned to 5.9 (typescript-eslint does not support TS 7 yet).
 - Deploy: `.github/workflows/deploy.yml` builds and publishes `dist/` to GitHub Pages on
   every push to main (repo Settings → Pages → Source must be "GitHub Actions"). The build
@@ -25,63 +25,67 @@ react-konva canvas, Zustand + Immer state. No UI framework; plain CSS with token
   stripped from production). Prefer asserting on document state over pixels.
 - Edit with tools that fail loudly when text doesn't match; scripted find/replace
   that silently no-ops has bitten this codebase before.
+- `model/` is pure (no React, no stores). UI never mutates stores directly: it calls
+  `store/actions`.
 
 ## The one rule: units
 
 - **Model space = feet.** Every coordinate, radius, grid spacing, nudge is in feet.
   Never store pixels in the document.
-- **Paper space = points (1/72").** Line weights (`strokeWeightPt`) and font sizes
-  (`fontSizePt`) are paper sizes, like CAD annotative objects: changing the drawing
-  scale changes bubble size on paper but not text/line size.
+- **Paper space = points (1/72").** Line weights (`strokeWeightPt`, overlap `weightPt`)
+  and label sizes (`labelSizePt`) are paper sizes, like CAD annotative objects: changing
+  the drawing scale changes bubble size on paper but not text/line size.
 - Conversions live only in `src/model/units.ts`:
   - `pxPerFt(scale, zoom) = 96 * paperInPerFt * zoom` (96 px = 1 paper inch at 100%)
   - `ptToFt(pt, scale)` for rendering paper-space values in model space
 - The Konva `Stage` is transformed by `scale = pxPerFt(scale, zoom)` and
   `position = (panX, panY)`; shapes are drawn directly in feet. Screen-constant
-  overlay sizes (handles, hit widths) are `px / k` where `k` is the stage scale.
+  overlay sizes (handles, hit widths) are `px / k` where `k` is the stage scale
+  (`canvas/viewport.ts#pxToFt`).
 
 ## Layout
 
 ```
-src/model/    pure TS, no React: types, units, geometry, color, defaults, factory,
-              selectors (resolveStyle etc.), migrate, overlaps (detection/arcs),
-              blob (freeform shapes: geometry, ring snapping, building)
-src/store/    history.ts (pure undo stack), documentStore (undoable Project),
-              uiStore (selection/tool/view — NOT undoable), workspaceStore (tabs),
-              actions/ (all document ops, one file per area: nodes, selection,
-              connections, categories, styles, settings, view, overlaps,
-              graphic, shapes; index.ts re-exports — import * as A from 'store/actions')
-src/render/   scene.ts (Project -> primitives, the ONE place visuals are decided),
-              drawCanvas.ts, sketch.ts (hand-drawn geometry + presets),
-              paper.ts (textures), fonts.ts (hand lettering, outlines for export)
+src/model/    pure TS: types, units, geometry (all shape-kind switches), color,
+              defaults, factory, selectors (resolveStyle…), migrate, overlaps,
+              standards (shared categories), polygon (area/contains/centroid),
+              blob/ (geometry.ts resolve+sample, build.ts from input, edit.ts points)
+src/store/    history.ts (pure undo stack), documentStore (active tab's undoable
+              Project), uiStore (selection/tool/view, NOT undoable), workspaceStore
+              (tabs + standards sync), standardsStore, actions/ (all document ops,
+              one file per area; index.ts re-exports: import * as A from 'store/actions')
+src/render/   scene.ts (Project -> primitives: nodes, labels, connections),
+              overlapScene.ts (overlap treatments), primitives.ts (Prim types +
+              helpers), drawCanvas.ts, sketch.ts (hand-drawn geometry + presets),
+              paper.ts, fonts.ts (hand lettering; outlines for export)
 src/canvas/   CanvasStage (stage + layers only), OverlayLayer (selection, handles,
-              previews), tools/ (select, bubble, connect, shape: Tool/Gesture
-              interface in tools/types.ts), input/useCanvasInput (pan, dispatch to
-              the active tool, cursor) + input/wheel, query.ts (hit testing,
-              snapping), overlayStore (marquee/stroke/snap hint), viewport.ts
-              (screen<->world), hitTest, textLayout, LabelEditor, layers/GridLayer
-src/ui/       Toolbar, ScaleBar, panels/ (properties, categories, settings),
-              controls/ (shared inputs), ExportDialog, Toast
-src/io/       fileActions (New/Open/Save/Import CSV commands), projectFile (JSON),
-              clipboard + clipboardActions (copy/cut/paste/paste style),
-              autosave (localStorage), csvImport, autoLayout, download helpers,
-              export/ (svg.ts is the single exporter; png/pdf build on it)
+              previews), tools/ (select, bubble, connect, shape behind the Tool/Gesture
+              interface in tools/types.ts), input/useCanvasInput (pan, dispatch to the
+              active tool, cursor) + input/wheel, query.ts (hit testing, snapping),
+              overlayStore (marquee/stroke/snap hint), viewport.ts, hitTest,
+              textLayout, LabelEditor, pointer, layers/GridLayer
+src/ui/       TabBar, Toolbar, FileMenu, ScaleBar, ExportDialog, Toast, focus.ts,
+              controls/ (shared inputs), panels/ (PropertiesPanel composes: BubbleProps
+              + StyleFields, ConnectionProps, OverlapProps, DrawingPanel, GraphicPanel,
+              OverlapSettingsPanel, ShortcutsHelp, CategoryPanel)
+src/io/       fileActions (New/Open/Save/Import CSV), projectFile (JSON),
+              clipboard + clipboardActions, autosave, csvImport, autoLayout,
+              download, export/ (svg.ts is the single exporter; png/pdf build on it)
 src/hooks/    useKeyboardShortcuts
-tests/        Vitest unit tests
-e2e/          Playwright browser tests (helpers.ts: fixtures, window.__bd readers)
+tests/        Vitest unit tests (render-regression.test.ts guards scene output)
+e2e/          Playwright, one spec per feature area (helpers.ts: fixtures, readers)
 ```
 
 ## Data model (src/model/types.ts)
 
-`Project { schemaVersion, meta, settings, categories, categoryOrder, nodes, nodeOrder, connections }`
+`Project { schemaVersion, meta, settings, categories, categoryOrder, nodes, nodeOrder, connections, overlaps }`
 Schema v2 (v1 files upgrade in `migrate.ts`).
 
 - `BubbleNode { id, name, x, y, shape, categoryId, style }` — x/y = center (circles) or
   the origin free blob points are relative to.
 - `shape` is a tagged union: `{kind:'circle', radiusFt}` | `{kind:'blob', points, gapFt}`.
-  All `switch(kind)` code is in `model/geometry.ts` (node functions take `project`,
-  because blob geometry depends on other bubbles). Add ellipse/roundedRect there
-  (+ scene.ts + migrate).
+  Node-level geometry functions take `project`, because blob geometry depends on other
+  bubbles.
 - **Styles**: `Category.style` and `settings.defaultStyle` are full `StyleProps`
   (fill, opacity, outline color/weight/style, label size/color/bold/secondary,
   sketchAmount). `node.style` holds only overrides (`Partial<StyleProps>`).
@@ -89,15 +93,14 @@ Schema v2 (v1 files upgrade in `migrate.ts`).
 - **Blobs**: points are `free` (ft, relative to node x/y) or `anchor` (bubble id +
   angle on its ring at `radius + gapFt`, `dir`, `arc` = follow ring to next point).
   Anchors follow bubbles. Deleting/copying without the hugged bubble calls
-  `blob.detachAnchors` (freezes them as free points); duplicate/paste remap ids.
+  `detachAnchors` (freezes them as free points); duplicate/paste remap ids.
 - **Overlaps**: computed, never stored, by `overlaps.findOverlaps` (circles only).
   `project.overlaps[overlapKey(a,b)]` stores per-pair mode overrides;
   `settings.overlap` holds the default mode/weight/color/inner arcs.
-- `settings.graphic` is the global sketch character (see render/sketch.ts PRESETS),
-  paper, lettering font and seed.
+- `settings.graphic`: the drawing's sketch character (render/sketch.ts PRESETS), paper,
+  lettering font and seed. Per diagram (not shared across tabs).
 - `Connection { id, from, to, type: 'strong'|'near'|'visual' }`. Endpoints are never
   stored; `geometry.connectionSegment` computes edge-to-edge points.
-- Bump `SCHEMA_VERSION` and add a migration case in `model/migrate.ts` on format change.
 
 ## Tabs
 
@@ -105,8 +108,8 @@ Schema v2 (v1 files upgrade in `migrate.ts`).
 view/selection in useUi, exactly as before tabs existed, so features stay tab-unaware.
 Inactive tabs are parked (`parked[id] = {history, view, selection}`) and swapped in by
 `switchTab`. New/Open open tabs (Open reuses an empty tab). Autosave stores every tab's
-project + view under `bubble-diagram:workspace:v1` (migrates the old single-doc key);
-undo history is per tab and in memory only. Closed tabs can be reopened from the toast.
+project + view + the standards under `bubble-diagram:workspace:v1`; undo history is per
+tab and in memory only. Closed tabs can be reopened from the toast.
 
 ## Category standards
 
@@ -120,35 +123,35 @@ Categories + the uncategorized default style are ONE shared library for all tabs
   history (its undo can revert its edit, which then propagates).
 - New tabs, opened files and restored tabs go through `adoptProject`: match by id, then
   by name; the standards' styles win; unknown categories join the standards.
-- Autosave stores the standards with the workspace (`standards` field).
-- The sketch/graphic style (`settings.graphic`) is still per diagram.
 
 ## State & undo conventions
 
-- Every document change goes through `useDocument.commit(recipe, {coalesceKey?})`
-  (usually via `store/actions.ts`). Never `set()` the document directly.
-- Continuous gestures (drag, resize-handle): `beginGesture()` → `preview()`… →
-  `endGesture()` = one undo step; `cancelGesture()` on Esc.
+- Every document change goes through `useDocument.commit(recipe, {coalesceKey?})`,
+  normally via `store/actions/*`. Never `set()` the document directly.
+- Continuous gestures (drag, resize handle, point drag): `beginGesture()` → `preview()`…
+  → `endGesture()` = one undo step; Esc calls `cancelGesture()` (gestures check
+  `gestureBase` and stop).
 - Rapid repeated edits (typing, color picker, arrow nudge, wheel resize) pass a
   `coalesceKey`; same key within 800 ms merges into one undo step.
 - Selection lives in `uiStore` and is pruned automatically when ids disappear.
-- Autosave writes the current document to localStorage (debounced).
 
 ## Rendering
 
-`render/scene.ts#buildScene(project)` returns primitives in feet (circles, arcs,
-paths, labels). Canvas draws them in one Konva `Shape` (`drawCanvas.ts`); the SVG
-exporter writes the same primitives. Sketch mode swaps exact geometry for seeded
-hand-drawn ops (`render/sketch.ts`, amounts in paper points). Node results are cached
-by a JSON key; keep anything visual in that key. Labels are drawn counter-scaled.
+`render/scene.ts#buildScene(project)` returns primitives in feet (circles, arcs, paths,
+labels). The canvas draws them in one Konva `Shape` (`drawCanvas.ts`); the SVG exporter
+writes the same primitives, so screen and export always match. Sketch mode swaps exact
+geometry for seeded hand-drawn ops (`render/sketch.ts`, amounts in paper points); use
+`primitives.openStrokePrims` for "exact if clean, sketched otherwise" lines. Per-node
+results are cached by a JSON key of everything visual (identity is not enough: blobs
+depend on other nodes) — keep anything visual in that key. Labels are drawn counter-scaled.
 Hand fonts are bundled via @fontsource; exports outline them with opentype.js
 (`fonts.loadOutlineFont` must run before `buildSvg`).
 
 ## Interaction summary
 
-- Tools: V select, B bubble (click to place), C connect (click A then B; Esc exits),
-  S shape (drag freehand or click points; Enter/double-click/first point closes;
-  double-click a gap between bubbles to fill the pocket).
+- Tools: V select, B bubble (click to place), C connect (click A then B, or drag A→B;
+  Esc exits), S shape (drag freehand or click points; Enter/double-click/first point
+  closes; double-click a gap between bubbles to fill the pocket).
 - Selected shape: drag control points (snap to rings; Alt = no snap), double-click a
   point to delete it, the edge to insert one.
 - Overlaps: ◇ marker at each overlap of a selected bubble; click it to set its mode.
@@ -158,14 +161,15 @@ Hand fonts are bundled via @fontsource; exports outline them with opentype.js
 - Ctrl+C/X/V use native clipboard events (JSON text, works across tabs); paste goes
   to the cursor. Ctrl+Shift+V pastes the copied element's look onto the selection.
   Pasting tab/comma-separated rows with a header imports bubbles.
-- Wheel: zoom at cursor. **Wheel over a selected bubble resizes it ±6" per notch**
-  (Shift = ±1"); Ctrl/⌘+wheel (and trackpad pinch) always zooms.
+- Wheel: zoom at cursor. Wheel over a selected bubble resizes it by the radius snap
+  (default 6"; Shift = 1"); Ctrl/⌘+wheel (and trackpad pinch) always zooms.
 - Pan: Space+drag or middle mouse. Marquee: drag on empty canvas (Shift adds).
-- Resize handle snaps radius to 6" (`settings.snap.radiusIncrementFt`); Shift = free.
+- Resize handle snaps radius to `settings.snap.radiusIncrementFt`; Shift = free.
 - Sidebar: a circle can be sized by radius, diameter or area (area sets radius =
   sqrt(area/π), unsnapped so the sf is exact); multi-select applies to each circle.
 - Shortcuts: Del, ⌘/Ctrl+D, ⌘/Ctrl+A, arrows (1', Shift 10'), ⌘/Ctrl+Z / Shift+Z / Y,
-  ⌘/Ctrl+S save, F zoom to fit, ⌘/Ctrl+0 100% (true paper size).
+  ⌘/Ctrl+S save, F zoom to fit, ⌘/Ctrl+0 100% (true paper size). Keep
+  `ui/panels/ShortcutsHelp.tsx` in sync.
 
 ## CSV import
 
@@ -177,29 +181,52 @@ content (`autoLayout.ts`). Sample: `examples/sample-program.csv`.
 
 ## Export
 
-- `io/export/svg.ts` builds SVG from the data model in paper points at true scale
+- `io/export/svg.ts` builds SVG from the scene in paper points at true scale
   (independent of zoom). PDF = svg2pdf.js onto a jsPDF page (fit-to-drawing or a
   standard sheet, centered, warns if too big). PNG = SVG rasterized at chosen DPI.
-- Label line-wrapping is shared by canvas and export (`canvas/textLayout.ts`) so
-  they match.
+- Label wrapping is shared by canvas and export (`canvas/textLayout.ts`).
+- jsPDF/svg2pdf are lazy-loaded on first PDF export.
+
+## How to add a feature
+
+Every feature: add/extend a unit test for pure logic, add an e2e test in the matching
+`e2e/*.spec.ts` for the interaction, update this file.
+
+- **New style property** (e.g. label italic): add it to `StyleProps` + `DEFAULT_STYLE`
+  (migration picks it up automatically via the default keys), a field in
+  `ui/panels/StyleFields.tsx`, and use the resolved value in `render/scene.ts` (and
+  `canvas/textLayout.ts` for labels). Categories, overrides, reset dots, standards and
+  paste-style all work without further changes.
+- **New drawing setting**: field in `DrawingSettings` + `DEFAULT_SETTINGS`; check that
+  `migrateProject` fills it for old files (nested objects need an explicit merge there);
+  an action in `store/actions/settings.ts`; a control in the relevant panel.
+- **New shape kind** (ellipse, rounded rectangle): extend the `Shape` union; TypeScript
+  then flags every `switch (shape.kind)` in `model/geometry.ts` to complete. Then
+  `nodeScene` in `render/scene.ts`, `cleanShape` in `model/migrate.ts`, and a tool or
+  a way to create it.
+- **New canvas tool**: implement `Tool` in `canvas/tools/<name>.ts` (return a `Gesture`
+  from `down` for drags), register it in `tools/index.ts` and `ToolId` in uiStore, add a
+  toolbar button and a shortcut.
+- **New document data** (anything saved in files): add to `types.ts`, `factory.ts`,
+  `migrate.ts`; if old files can't be read as-is, bump `SCHEMA_VERSION` with an upgrade
+  step. Copy/paste (`io/clipboard.ts`) and duplicate may need to carry it.
+- **Intentional visual change**: `tests/render-regression.test.ts` will fail; check the
+  app/export, then replace the expected hash.
 
 ## Testing notes
 
-- Unit tests cover units, geometry, history, project file + v1 migration, CSV,
-  styles, clipboard, overlaps, sketch determinism, blob building/attachment.
-- e2e (`e2e/*.spec.ts`, 15 tests) cover scale, drag/resize/wheel, selection + undo,
-  connections, sizing by area, in-place names, category styles, clipboard, overlaps,
-  shape drawing and point editing, tabs, CSV import and exports. Add one per feature.
+- Unit tests (41): units, geometry, history, project file + v1 migration, CSV, styles,
+  standards, clipboard, overlaps, sketch determinism, blobs, render regression.
+- e2e (16, one file per area): bubbles (scale, drag/resize/wheel, selection + undo,
+  connect, sizing, names), styles + standards, clipboard, overlaps, shapes, tabs, io.
 - Canvas hit-testing is geometric (`canvas/query.ts`, `canvas/hitTest.ts`); Konva layers
   are `listening={false}`. Window-level move/up (input/useCanvasInput.ts) so drags
-  continue outside the canvas. To add a tool: implement `Tool` in canvas/tools/,
-  register it in tools/index.ts and the `Tool` union in uiStore.
-- jsPDF/svg2pdf are lazy-loaded on first PDF export.
+  continue outside the canvas.
 
 ## Out of scope for v1 (hooks left in place)
 
-- Ellipses / rounded rectangles: `Shape` union + geometry.ts switches + scene.ts.
-- Metric: `settings.unitSystem` + formatting/parsing confined to units.ts.
+- Ellipses / rounded rectangles: see "New shape kind" above.
+- Metric: `settings.unitSystem`; formatting/parsing is confined to `units.ts`.
 - Layers / locking: reserved optional `layerId` / `locked` on `BubbleNode`.
 
 ## Style
