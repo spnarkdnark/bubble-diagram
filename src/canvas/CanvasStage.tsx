@@ -1,10 +1,10 @@
-/** The drawing surface: Konva stage, grid, the rendered scene, overlays and the name editor. */
+/** The drawing surface: Konva stage, grid, the rendered scene, overlays and the in-place label editor. */
 import { useEffect, useMemo, useRef } from 'react';
 import { Layer, Shape, Stage } from 'react-konva';
 import type { Paper } from '../model/types';
 import { pxPerFt } from '../model/units';
 import { getDoc, useDoc } from '../store/documentStore';
-import { useUi } from '../store/uiStore';
+import { useUi, type EditingLabel } from '../store/uiStore';
 import * as A from '../store/actions';
 import { buildScene, type Scene } from '../render/scene';
 import { drawLabels, drawPrims } from '../render/drawCanvas';
@@ -21,14 +21,20 @@ function paperStyle(paper: Paper): React.CSSProperties {
   return { backgroundColor: PAPER_COLORS[paper], backgroundImage: url ? `url(${url})` : undefined };
 }
 
-function drawScene(ctx: CanvasRenderingContext2D, scene: Scene, k: number, hideLabelOf: string | null) {
+function drawScene(ctx: CanvasRenderingContext2D, scene: Scene, k: number, editing: EditingLabel | null) {
   drawPrims(ctx, scene.connections);
   for (const n of scene.nodes) {
     drawPrims(ctx, n.fill);
     drawPrims(ctx, n.outline);
   }
   drawPrims(ctx, scene.overlays);
-  const labels = scene.nodes.flatMap((n) => (n.label && n.id !== hideLabelOf ? [n.label] : []));
+  // hide the lines under the in-place editor
+  const labels = scene.nodes.flatMap((n) => {
+    if (!n.label) return [];
+    if (n.id !== editing?.id) return [n.label];
+    const lines = n.label.layout.lines.filter((l) => l.secondary !== (editing.part === 'size'));
+    return [{ ...n.label, layout: { ...n.label.layout, lines } }];
+  });
   drawLabels(ctx, labels, k, scene.ftPerPt);
 }
 
@@ -72,8 +78,8 @@ export function CanvasStage() {
     return () => ro.disconnect();
   }, []);
 
-  const editingNode = editingLabel ? doc.nodes[editingLabel] : undefined;
-  const editingPrim = editingLabel ? scene.nodes.find((n) => n.id === editingLabel)?.label : undefined;
+  const editingNode = editingLabel ? doc.nodes[editingLabel.id] : undefined;
+  const editingPrim = editingLabel ? scene.nodes.find((n) => n.id === editingLabel.id)?.label : undefined;
   const closeEditor = () => useUi.getState().setEditingLabel(null);
 
   return (
@@ -114,17 +120,19 @@ export function CanvasStage() {
         <OverlayLayer doc={doc} scene={scene} k={k} />
       </Stage>
 
-      {editingNode && editingPrim && (
+      {editingLabel && editingNode && editingPrim && (
         <LabelEditor
-          key={editingLabel}
-          name={editingNode.name}
+          key={`${editingLabel.id}:${editingLabel.part}`}
+          value={editingLabel.part === 'size' ? A.sizeEditText(editingNode.id) : editingNode.name}
           label={editingPrim}
+          part={editingLabel.part}
           k={k}
           panX={view.panX}
           panY={view.panY}
           ftPerPt={scene.ftPerPt}
           onCommit={(text) => {
-            A.renameNode(editingNode.id, text);
+            if (editingLabel.part === 'size') A.setSizeFromText(editingNode.id, text);
+            else A.renameNode(editingNode.id, text);
             closeEditor();
           }}
           onCancel={closeEditor}

@@ -11,6 +11,13 @@ export interface Selection {
   overlaps: string[];
 }
 
+/** Which part of a label: the name lines, or the secondary size line. */
+export type LabelPart = 'name' | 'size';
+export interface EditingLabel {
+  id: Id;
+  part: LabelPart;
+}
+
 export interface View {
   zoom: number;
   /** stage translation in screen px */
@@ -34,9 +41,9 @@ interface UiState {
   bumpFontEpoch: () => void;
   /** points clicked so far with the shape tool (world feet) */
   shapeDraft: Point[] | null;
-  /** node whose name is being edited on the canvas */
-  editingLabel: Id | null;
-  setEditingLabel: (id: Id | null) => void;
+  /** label line being edited on the canvas: a node's name or its size (area/radius) */
+  editingLabel: EditingLabel | null;
+  setEditingLabel: (e: EditingLabel | null) => void;
   setShapeDraft: (pts: Point[] | null) => void;
 
   setTool: (t: ToolId) => void;

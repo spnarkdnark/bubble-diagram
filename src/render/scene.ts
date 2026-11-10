@@ -186,13 +186,14 @@ export function buildScene(project: Project): Scene {
   return { connections, nodes, overlays, overlaps, ftPerPt };
 }
 
-/** World-space box (feet) around a label's name lines; null when it has none. */
-export function labelNameRect(
+/** World-space box (feet) around a label's name lines (or its secondary line); null when it has none. */
+export function labelRect(
   label: LabelPrim | null,
   ftPerPt: number,
+  secondary = false,
 ): { minX: number; minY: number; maxX: number; maxY: number } | null {
   if (!label) return null;
-  const lines = label.layout.lines.filter((l) => !l.secondary);
+  const lines = label.layout.lines.filter((l) => l.secondary === secondary);
   if (lines.length === 0) return null;
   const w = Math.max(...lines.map((l) => l.wPt), lines[0].sizePt * 2);
   const top = lines[0].topPt;

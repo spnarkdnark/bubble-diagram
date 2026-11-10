@@ -2,10 +2,11 @@
 import type { Draft } from 'immer';
 import type { BubbleNode, Id, Point } from '../../model/types';
 import { createNode, newId } from '../../model/factory';
-import { shapeSize, withSize } from '../../model/geometry';
+import { nodeArea, radiusFromArea, shapeSize, withSize } from '../../model/geometry';
+import { resolveStyle } from '../../model/selectors';
 import { DUPLICATE_OFFSET_FT, MIN_RADIUS_FT } from '../../model/defaults';
 import { detachAnchors, remapBlob } from '../../model/blob';
-import { stepToIncrement } from '../../model/units';
+import { formatArea, formatFeetInches, parseArea, parseLength, stepToIncrement } from '../../model/units';
 import { getDoc } from '../documentStore';
 import { commit, ui } from './shared';
 
@@ -116,6 +117,31 @@ export function bringToFront(ids: Id[]) {
   commit((d) => {
     d.nodeOrder = [...d.nodeOrder.filter((id) => !set.has(id)), ...d.nodeOrder.filter((id) => set.has(id))];
   });
+}
+
+/** Text for the on-canvas size editor: the circle's area or radius, whichever its label shows. */
+export function sizeEditText(id: Id): string {
+  const doc = getDoc();
+  const n = doc.nodes[id];
+  if (!n) return '';
+  return resolveStyle(n, doc).labelSecondary === 'radius'
+    ? formatFeetInches(shapeSize(n.shape))
+    : formatArea(nodeArea(n, doc));
+}
+
+/** Resize a circle from the on-canvas size editor (area or radius); unparseable input is ignored. */
+export function setSizeFromText(id: Id, text: string) {
+  const doc = getDoc();
+  const n = doc.nodes[id];
+  if (!n || n.shape.kind !== 'circle' || text.trim() === sizeEditText(id)) return;
+  if (resolveStyle(n, doc).labelSecondary === 'radius') {
+    const r = parseLength(text.replace(/^\s*r\s*/i, ''));
+    if (r !== null && r > 0) setRadius([id], r);
+  } else {
+    const sf = parseArea(text);
+    // exact area: radius = sqrt(area/π), unsnapped
+    if (sf !== null && sf > 0) setRadius([id], radiusFromArea(sf));
+  }
 }
 
 /** Rename from the on-canvas editor: one undo step; empty names are ignored. */

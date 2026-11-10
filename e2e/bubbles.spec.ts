@@ -105,6 +105,31 @@ test('names edit in place only on the selected bubble', async ({ page, canvas })
   expect((await nodes(page))[0].name).toBe('Reading Room');
 });
 
+test('area edits in place on the selected bubble', async ({ page, canvas }) => {
+  await canvas.bubble(400, 300);
+  await canvas.click(1000, 700);
+  await canvas.click(400, 309); // selects (the area line sits just below the name)
+  await expect(page.locator('.label-editor')).toHaveCount(0);
+  await canvas.click(400, 309); // edits the area, not the name
+  await expect(page.locator('.label-editor[aria-label="Area"]')).toHaveValue('314 sf');
+  await page.keyboard.type('1,200 sf');
+  await page.keyboard.press('Enter');
+  const [n] = await nodes(page);
+  expect(Math.PI * n.shape.radiusFt ** 2).toBeCloseTo(1200, 6);
+  expect(n.name).toBe('Space 1');
+  // nonsense is ignored; Esc cancels
+  await canvas.dblclick(400, 309);
+  await page.keyboard.type('big');
+  await page.keyboard.press('Enter');
+  await canvas.dblclick(400, 309);
+  await page.keyboard.type('50');
+  await page.keyboard.press('Escape');
+  expect((await nodes(page))[0].shape.radiusFt).toBe(n.shape.radiusFt);
+  // one undo step back to 10'
+  await page.keyboard.press('Control+z');
+  expect((await nodes(page))[0].shape.radiusFt).toBe(10);
+});
+
 test('drag from one bubble to another connects them', async ({ page, canvas }) => {
   await canvas.bubble(300, 300);
   await canvas.bubble(700, 300);

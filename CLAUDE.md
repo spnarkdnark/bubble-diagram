@@ -155,9 +155,12 @@ Hand fonts are bundled via @fontsource; exports outline them with opentype.js
 - Selected shape: drag control points (snap to rings; Alt = no snap), double-click a
   point to delete it, the edge to insert one.
 - Overlaps: ◇ marker at each overlap of a selected bubble; click it to set its mode.
-- Names: click the name of the already-selected element (or double-click any name) to
-  edit it in place (`canvas/LabelEditor.tsx`, `uiStore.editingLabel`); Enter saves,
-  Shift+Enter breaks the line, Esc cancels, blur saves. One undo step.
+- Names and areas: click the name (or the area line below it) of the already-selected
+  element, or double-click either, to edit it in place (`canvas/LabelEditor.tsx`,
+  `uiStore.editingLabel = {id, part: 'name'|'size'}`, `query.labelAt`). Enter saves,
+  Shift+Enter breaks a name's line, Esc cancels, blur saves. One undo step. The size line
+  edits whatever the label shows: area (exact radius = sqrt(area/π)) or radius
+  (`actions.setSizeFromText`); circles only, since a shape's area follows its outline.
 - Ctrl+C/X/V use native clipboard events (JSON text, works across tabs); paste goes
   to the cursor. Ctrl+Shift+V pastes the copied element's look onto the selection.
   Pasting tab/comma-separated rows with a header imports bubbles.
@@ -217,8 +220,8 @@ Every feature: add/extend a unit test for pure logic, add an e2e test in the mat
 
 - Unit tests (41): units, geometry, history, project file + v1 migration, CSV, styles,
   standards, clipboard, overlaps, sketch determinism, blobs, render regression.
-- e2e (16, one file per area): bubbles (scale, drag/resize/wheel, selection + undo,
-  connect, sizing, names), styles + standards, clipboard, overlaps, shapes, tabs, io.
+- e2e (17, one file per area): bubbles (scale, drag/resize/wheel, selection + undo,
+  connect, sizing, names, in-place area), styles + standards, clipboard, overlaps, shapes, tabs, io.
 - Canvas hit-testing is geometric (`canvas/query.ts`, `canvas/hitTest.ts`); Konva layers
   are `listening={false}`. Window-level move/up (input/useCanvasInput.ts) so drags
   continue outside the canvas.

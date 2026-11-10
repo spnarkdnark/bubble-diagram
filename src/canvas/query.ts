@@ -5,9 +5,9 @@
 import type { BubbleNode, Id, Point } from '../model/types';
 import { blobFromClicks, blobGeometry, circleRings, snapToRing, toBlobShape, type SnapInfo } from '../model/blob';
 import { getDoc } from '../store/documentStore';
-import { useUi } from '../store/uiStore';
+import { useUi, type EditingLabel } from '../store/uiStore';
 import { SNAP_PX } from '../store/actions';
-import { labelNameRect, type Scene } from '../render/scene';
+import { labelRect, type Scene } from '../render/scene';
 import { hitTest, type Hit } from './hitTest';
 import { pxToFt } from './viewport';
 import type { SnapHint } from './overlayStore';
@@ -44,15 +44,22 @@ export function hitAt(p: Point): Hit {
   return hitTest(getDoc(), p, pxToFt(HIT_TOL_PX), resizeTarget(), visibleMarkers());
 }
 
-/** Node whose name label is under `p` (topmost first). */
-export function labelAt(p: Point): Id | null {
+/**
+ * Editable label line under `p` (topmost node first): its name, or the size line
+ * (area/radius) of a circle. Shapes' areas follow their outline, so they aren't editable.
+ */
+export function labelAt(p: Point): EditingLabel | null {
   if (!latestScene) return null;
   const pad = pxToFt(3);
+  const doc = getDoc();
   const nodes = latestScene.nodes;
+  const inside = (r: ReturnType<typeof labelRect>) =>
+    r !== null && p.x >= r.minX - pad && p.x <= r.maxX + pad && p.y >= r.minY - pad && p.y <= r.maxY + pad;
   for (let i = nodes.length - 1; i >= 0; i--) {
-    const r = labelNameRect(nodes[i].label, latestScene.ftPerPt);
-    if (r && p.x >= r.minX - pad && p.x <= r.maxX + pad && p.y >= r.minY - pad && p.y <= r.maxY + pad)
-      return nodes[i].id;
+    const { id, label } = nodes[i];
+    if (inside(labelRect(label, latestScene.ftPerPt))) return { id, part: 'name' };
+    if (doc.nodes[id]?.shape.kind === 'circle' && inside(labelRect(label, latestScene.ftPerPt, true)))
+      return { id, part: 'size' };
   }
   return null;
 }

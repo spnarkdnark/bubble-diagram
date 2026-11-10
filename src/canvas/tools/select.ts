@@ -1,6 +1,6 @@
 /**
  * Select tool: click/shift-click/marquee selection, moving, the circle resize
- * handle, shape point editing, overlap markers and in-place name editing.
+ * handle, shape point editing, overlap markers and in-place name/area editing.
  */
 import type { Id, Point } from '../../model/types';
 import { blobGeometry, movePoint } from '../../model/blob';
@@ -51,9 +51,11 @@ function moveGesture(start: CanvasEvent, clicked: Id, wasSelected: boolean): Ges
       const ui = useUi.getState();
       if (moved) gesture().endGesture();
       else if (!e.shift && ui.selection.nodes.length > 1) A.selectNodes([clicked]);
-      // click on the name of the already-selected element: edit it in place
-      else if (wasSelected && ui.selection.nodes.length === 1 && labelAt(e.world) === clicked)
-        ui.setEditingLabel(clicked);
+      // click on the name or area of the already-selected element: edit it in place
+      else if (wasSelected && ui.selection.nodes.length === 1) {
+        const label = labelAt(e.world);
+        if (label?.id === clicked) ui.setEditingLabel(label);
+      }
     },
   };
 }
@@ -160,10 +162,10 @@ export const selectTool: Tool = {
     const ui = useUi.getState();
     const point = shapePointAt(e.world);
     if (point) return A.deleteBlobPoint(point.id, point.index);
-    const named = labelAt(e.world);
-    if (named) {
-      A.selectNodes([named]);
-      ui.setEditingLabel(named);
+    const label = labelAt(e.world);
+    if (label) {
+      A.selectNodes([label.id]);
+      ui.setEditingLabel(label);
       return;
     }
     // on the edge of the selected shape: insert a point
@@ -185,7 +187,7 @@ export const selectTool: Tool = {
   cursor(e) {
     const ui = useUi.getState();
     if (shapePointAt(e.world)) return 'grab';
-    if (ui.selection.nodes.length === 1 && labelAt(e.world) === ui.selection.nodes[0]) return 'text';
+    if (ui.selection.nodes.length === 1 && labelAt(e.world)?.id === ui.selection.nodes[0]) return 'text';
     const hit = hitAt(e.world);
     if (hit.kind === 'handle') return 'ew-resize';
     if (hit.kind === 'node') return 'move';

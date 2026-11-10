@@ -11,6 +11,7 @@ export function ShortcutsHelp() {
     ['Scroll', `Zoom (over selected bubble: resize ${step})`],
     ['Space + drag', 'Pan (or middle mouse)'],
     ['Shift + click', 'Add to selection'],
+    ['Click name / area', 'Edit it in place (selected bubble; or double-click)'],
     ['Arrows', 'Nudge 1′ (Shift 10′)'],
     ['Ctrl C / X / V', 'Copy / Cut / Paste at cursor'],
     ['Ctrl ⇧V', 'Paste style onto selection'],
