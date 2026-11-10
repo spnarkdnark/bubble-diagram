@@ -300,3 +300,9 @@ export function viewCenterWorld(): Point {
   const k = pxPerFt(getDoc().settings.scale, view.zoom);
   return { x: (stageSize.width / 2 - view.panX) / k, y: (stageSize.height / 2 - view.panY) / k };
 }
+
+export function setSnapIncrement(ft: number) {
+  commit((d) => {
+    d.settings.snap.radiusIncrementFt = ft;
+  });
+}
