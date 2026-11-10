@@ -27,7 +27,8 @@ src/model/    pure TS, no React: types, units, geometry, color, defaults, factor
               selectors (resolveStyle etc.), migrate, overlaps (detection/arcs),
               blob (freeform shapes: geometry, ring snapping, building)
 src/store/    history.ts (pure undo stack), documentStore (undoable Project),
-              uiStore (selection/tool/view — NOT undoable), actions.ts (all ops)
+              uiStore (selection/tool/view — NOT undoable), actions.ts (all ops),
+              workspaceStore (tabs)
 src/render/   scene.ts (Project -> primitives, the ONE place visuals are decided),
               drawCanvas.ts, sketch.ts (hand-drawn geometry + presets),
               paper.ts (textures), fonts.ts (hand lettering, outlines for export)
@@ -68,6 +69,14 @@ Schema v2 (v1 files upgrade in `migrate.ts`).
 - `Connection { id, from, to, type: 'strong'|'near'|'visual' }`. Endpoints are never
   stored; `geometry.connectionSegment` computes edge-to-edge points.
 - Bump `SCHEMA_VERSION` and add a migration case in `model/migrate.ts` on format change.
+
+## Tabs
+`store/workspaceStore.ts`. The ACTIVE tab's document/history live in useDocument and its
+view/selection in useUi, exactly as before tabs existed, so features stay tab-unaware.
+Inactive tabs are parked (`parked[id] = {history, view, selection}`) and swapped in by
+`switchTab`. New/Open open tabs (Open reuses an empty tab). Autosave stores every tab's
+project + view under `bubble-diagram:workspace:v1` (migrates the old single-doc key);
+undo history is per tab and in memory only. Closed tabs can be reopened from the toast.
 
 ## State & undo conventions
 - Every document change goes through `useDocument.commit(recipe, {coalesceKey?})`

@@ -1,7 +1,7 @@
 /** High-level file commands used by the toolbar and shortcuts. */
-import { createProject } from '../model/factory';
 import { getDoc, useDocument } from '../store/documentStore';
 import { useUi } from '../store/uiStore';
+import { newTab } from '../store/workspaceStore';
 import { selectNodes, viewCenterWorld, zoomToFit } from '../store/actions';
 import { pickFile } from './download';
 import { buildImport, parseCsv } from './csvImport';
@@ -9,19 +9,20 @@ import { openProjectFile, saveProjectFile } from './projectFile';
 
 const toast = (m: string) => useUi.getState().showToast(m);
 
+/** New diagram in a new tab. */
 export function newProject() {
-  if (getDoc().nodeOrder.length && !confirm('Start a new diagram? (You can undo this.)')) return;
-  useDocument.getState().replace(createProject());
-  useUi.getState().clearSelection();
-  zoomToFit();
+  newTab();
 }
 
 export async function openProject() {
   try {
     const p = await openProjectFile();
     if (!p) return;
-    useDocument.getState().replace(p);
-    useUi.getState().clearSelection();
+    // like a browser: reuse the current tab only when it is still empty
+    if (getDoc().nodeOrder.length === 0) {
+      useDocument.getState().replace(p, true);
+      useUi.getState().clearSelection();
+    } else newTab(p);
     requestAnimationFrame(zoomToFit);
     toast(`Opened “${p.meta.name}”`);
   } catch (e) {

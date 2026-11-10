@@ -42,7 +42,6 @@ export function Toolbar() {
 
   return (
     <header className="toolbar">
-      <div className="brand">Bubble Diagram</div>
       <div className="group">
         <ToolButton tool="select" label="Select" shortcut="V" icon={Icons.select} />
         <ToolButton tool="bubble" label="Bubble" shortcut="B" icon={Icons.bubble} />

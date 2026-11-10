@@ -1,6 +1,7 @@
 import { useEffect } from 'react';
 import { CanvasStage } from './canvas/CanvasStage';
 import { Toolbar } from './ui/Toolbar';
+import { TabBar } from './ui/TabBar';
 import { PropertiesPanel } from './ui/panels/PropertiesPanel';
 import { ScaleBar } from './ui/ScaleBar';
 import { Toast } from './ui/Toast';
@@ -20,6 +21,7 @@ export function App() {
   useKeyboardShortcuts(shortcutHandlers);
   return (
     <div className="app">
+      <TabBar />
       <Toolbar />
       <main className="workspace">
         <div className="canvas-wrap">

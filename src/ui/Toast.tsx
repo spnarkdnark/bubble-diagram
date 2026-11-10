@@ -7,9 +7,24 @@ export function Toast() {
   useEffect(() => {
     if (!toast) return;
     setVisible(true);
-    const t = setTimeout(() => setVisible(false), 3200);
+    const t = setTimeout(() => setVisible(false), toast.action ? 7000 : 3200);
     return () => clearTimeout(t);
   }, [toast]);
   if (!toast || !visible) return null;
-  return <div className="toast">{toast.message}</div>;
+  return (
+    <div className="toast" role="status">
+      {toast.message}
+      {toast.action && (
+        <button
+          className="toast-action"
+          onClick={() => {
+            toast.action!.run();
+            setVisible(false);
+          }}
+        >
+          {toast.action.label}
+        </button>
+      )}
+    </div>
+  );
 }

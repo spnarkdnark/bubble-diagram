@@ -2,11 +2,9 @@ import React from 'react';
 import ReactDOM from 'react-dom/client';
 import { App } from './App';
 import './styles/app.css';
-import { loadAutosave } from './io/autosave';
-import { useDocument } from './store/documentStore';
+import { restoreAutosave } from './io/autosave';
 
-const saved = loadAutosave();
-if (saved) useDocument.getState().replace(saved, true);
+restoreAutosave();
 
 ReactDOM.createRoot(document.getElementById('root')!).render(
   <React.StrictMode>

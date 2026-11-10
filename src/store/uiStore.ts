@@ -27,7 +27,7 @@ interface UiState {
   /** live dimension readout while resizing, anchored in world feet */
   readout: { text: string; at: Point } | null;
   exportOpen: boolean;
-  toast: { message: string; id: number } | null;
+  toast: { message: string; id: number; action?: { label: string; run: () => void } } | null;
   /** bumps when a web font finishes loading so the canvas re-measures labels */
   fontEpoch: number;
   bumpFontEpoch: () => void;
@@ -47,7 +47,7 @@ interface UiState {
   setSpaceDown: (v: boolean) => void;
   setReadout: (r: UiState['readout']) => void;
   setExportOpen: (v: boolean) => void;
-  showToast: (message: string) => void;
+  showToast: (message: string, action?: { label: string; run: () => void }) => void;
 }
 
 export const MIN_ZOOM = 0.05;
@@ -85,5 +85,5 @@ export const useUi = create<UiState>((set) => ({
   setSpaceDown: (spaceDown) => set({ spaceDown }),
   setReadout: (readout) => set({ readout }),
   setExportOpen: (exportOpen) => set({ exportOpen }),
-  showToast: (message) => set({ toast: { message, id: Date.now() } }),
+  showToast: (message, action) => set({ toast: { message, id: Date.now(), action } }),
 }));

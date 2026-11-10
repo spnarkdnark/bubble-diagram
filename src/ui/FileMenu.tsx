@@ -53,7 +53,7 @@ export function FileMenu() {
       <Menu
         label="File"
         items={[
-          { label: 'New diagram', onClick: newProject },
+          { label: 'New diagram (tab)', onClick: newProject },
           { label: 'Open…', kbd: 'Ctrl O', onClick: openProject },
           { label: 'Save', kbd: 'Ctrl S', onClick: saveProject },
           { label: 'Import CSV…', onClick: importCsv, separator: true },

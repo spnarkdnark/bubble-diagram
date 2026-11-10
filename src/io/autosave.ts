@@ -1,37 +1,93 @@
+/**
+ * Autosave: every open tab (document + view) is written to localStorage,
+ * debounced. Undo history is not persisted.
+ */
 import type { Project } from '../model/types';
 import { migrateProject } from '../model/migrate';
 import { useDocument } from '../store/documentStore';
+import { useUi, type View } from '../store/uiStore';
+import { restoreWorkspace, tabProject, useWorkspace } from '../store/workspaceStore';
 
-export const AUTOSAVE_KEY = 'bubble-diagram:autosave:v1';
+export const WORKSPACE_KEY = 'bubble-diagram:workspace:v1';
+/** single-document autosave from before tabs existed */
+const LEGACY_KEY = 'bubble-diagram:autosave:v1';
 const DEBOUNCE_MS = 500;
 
-export function loadAutosave(): Project | null {
-  try {
-    const raw = localStorage.getItem(AUTOSAVE_KEY);
-    return raw ? migrateProject(JSON.parse(raw)) : null;
-  } catch {
-    return null;
-  }
+interface SavedWorkspace {
+  active: number;
+  tabs: { project: unknown; view?: View }[];
 }
 
-/** Subscribe to document changes and persist them (debounced). Returns unsubscribe. */
+/** Restore saved tabs into the stores. Returns true when something was restored. */
+export function restoreAutosave(): boolean {
+  try {
+    const raw = localStorage.getItem(WORKSPACE_KEY);
+    if (raw) {
+      const saved = JSON.parse(raw) as SavedWorkspace;
+      const tabs: { project: Project; view?: View }[] = [];
+      for (const t of saved.tabs ?? []) {
+        try {
+          tabs.push({ project: migrateProject(t.project), view: t.view });
+        } catch {
+          /* skip a damaged tab rather than losing all of them */
+        }
+      }
+      if (tabs.length) {
+        restoreWorkspace(tabs, saved.active ?? 0);
+        return true;
+      }
+    }
+    const legacy = localStorage.getItem(LEGACY_KEY);
+    if (legacy) {
+      restoreWorkspace([{ project: migrateProject(JSON.parse(legacy)) }], 0);
+      return true;
+    }
+  } catch {
+    /* unreadable storage: start fresh */
+  }
+  return false;
+}
+
+function snapshot(): SavedWorkspace {
+  const ws = useWorkspace.getState();
+  const ui = useUi.getState();
+  return {
+    active: ws.order.indexOf(ws.activeId),
+    tabs: ws.order.map((id) => ({
+      project: tabProject(id),
+      view: id === ws.activeId ? ui.view : ws.parked[id]?.view,
+    })),
+  };
+}
+
+/** Persist the workspace whenever a document, the tab list or a view changes. */
 export function installAutosave(): () => void {
   let timer: number | undefined;
+  let warned = false;
   const flush = () => {
     try {
-      localStorage.setItem(AUTOSAVE_KEY, JSON.stringify(useDocument.getState().history.present));
+      localStorage.setItem(WORKSPACE_KEY, JSON.stringify(snapshot()));
+      localStorage.removeItem(LEGACY_KEY);
     } catch {
-      /* quota or privacy mode: ignore */
+      if (!warned) {
+        warned = true;
+        useUi.getState().showToast('Autosave failed (browser storage is full). Use File → Save to keep your work.');
+      }
     }
   };
-  const unsub = useDocument.subscribe((s, prev) => {
-    if (s.history.present === prev.history.present || s.gestureBase) return;
+  const schedule = () => {
+    if (useDocument.getState().gestureBase) return;
     window.clearTimeout(timer);
     timer = window.setTimeout(flush, DEBOUNCE_MS);
-  });
+  };
+  const unsubs = [
+    useDocument.subscribe((s, prev) => s.history.present !== prev.history.present && schedule()),
+    useWorkspace.subscribe(schedule),
+    useUi.subscribe((s, prev) => s.view !== prev.view && schedule()),
+  ];
   window.addEventListener('beforeunload', flush);
   return () => {
-    unsub();
+    unsubs.forEach((u) => u());
     window.clearTimeout(timer);
     window.removeEventListener('beforeunload', flush);
   };
