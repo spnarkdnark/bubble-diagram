@@ -1,4 +1,5 @@
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
+import { loadOutlineFont } from '../render/fonts';
 import { useDoc } from '../store/documentStore';
 import { useUi } from '../store/uiStore';
 import { buildSvg, type ExportOptions } from '../io/export/svg';
@@ -36,7 +37,19 @@ function ExportDialogBody() {
     marginIn: 0.5,
     nodeIds: onlySelection && selection.length ? selection : undefined,
   };
-  const svg = useMemo(() => buildSvg(doc, opts), [doc, includeGrid, includeScaleBar, onlySelection, selection]);
+  // hand-lettering fonts must be parsed before labels can be outlined
+  const labelFont = doc.settings.graphic.labelFont;
+  const [fontReady, setFontReady] = useState(labelFont === 'clean');
+  useEffect(() => {
+    let alive = true;
+    loadOutlineFont(labelFont)
+      .then(() => alive && setFontReady(true))
+      .catch(() => alive && setFontReady(true));
+    return () => {
+      alive = false;
+    };
+  }, [labelFont]);
+  const svg = useMemo(() => (fontReady ? buildSvg(doc, opts) : null), [doc, includeGrid, includeScaleBar, onlySelection, selection, fontReady]);
   const layout = svg && format === 'pdf' ? pageLayout(svg, sheet, orientation) : null;
   const effDpi = svg && format === 'png' ? clampDpi(svg, parseInt(dpi)) : 0;
 
@@ -106,7 +119,7 @@ function ExportDialogBody() {
           </Field>
         )}
 
-        {!svg && <div className="warning">Nothing to export yet — add some bubbles first.</div>}
+        {!svg && fontReady && <div className="warning">Nothing to export yet — add some bubbles first.</div>}
         {svg && (
           <div className="info">
             Drawing at true scale: {fmtIn(svg.widthPt)} × {fmtIn(svg.heightPt)}

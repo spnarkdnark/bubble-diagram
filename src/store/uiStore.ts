@@ -28,6 +28,9 @@ interface UiState {
   readout: { text: string; at: Point } | null;
   exportOpen: boolean;
   toast: { message: string; id: number } | null;
+  /** bumps when a web font finishes loading so the canvas re-measures labels */
+  fontEpoch: number;
+  bumpFontEpoch: () => void;
 
   setTool: (t: Tool) => void;
   select: (sel: Partial<Selection>) => void;
@@ -54,6 +57,8 @@ export const useUi = create<UiState>((set) => ({
   readout: null,
   exportOpen: false,
   toast: null,
+  fontEpoch: 0,
+  bumpFontEpoch: () => set((s) => ({ fontEpoch: s.fontEpoch + 1 })),
 
   setTool: (tool) => set({ tool, connectFrom: null }),
   select: (sel) =>

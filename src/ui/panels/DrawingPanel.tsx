@@ -4,6 +4,7 @@ import { totalArea } from '../../model/selectors';
 import { formatArea, formatLengthCompact } from '../../model/units';
 import { Field, NumberField, ReadOnly, Section, SelectField, TextField } from '../controls/Controls';
 import { findOverlaps, OVERLAP_MODE_LABELS } from '../../model/overlaps';
+import { GraphicPanel } from './GraphicPanel';
 import type { OverlapColor, OverlapMode, OverlapSettings } from '../../model/types';
 
 const SNAP_OPTIONS = [
@@ -41,6 +42,7 @@ export function DrawingPanel() {
           <ReadOnly value={formatArea(totalArea(doc))} />
         </Field>
       </Section>
+      <GraphicPanel />
       <Section title="Overlaps">
         <Field label="Treatment">
           <SelectField<OverlapMode>

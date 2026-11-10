@@ -6,6 +6,7 @@ import { SCALES } from '../model/units';
 import { GRID_SPACINGS_FT } from '../model/defaults';
 import type { ScaleId } from '../model/types';
 import { FileMenu } from './FileMenu';
+import { PRESET_OPTIONS } from './panels/GraphicPanel';
 
 function ToolButton({ tool, label, shortcut, icon }: { tool: Tool; label: string; shortcut: string; icon: ReactNode }) {
   const active = useUi((s) => s.tool === tool);
@@ -49,7 +50,7 @@ export function Toolbar() {
         <button className="btn ghost" disabled={!canRedo} title="Redo (Ctrl+Shift+Z)" onClick={() => useDocument.getState().redo()}>↷</button>
       </div>
       <div className="group">
-        <label className="inline-field">
+        <label className="inline-field" title="Drawing scale">
           <span>Scale</span>
           <select className="input" value={doc.settings.scale} onChange={(e) => A.setScale(e.target.value as ScaleId)}>
             {SCALES.map((s) => (
@@ -66,6 +67,16 @@ export function Toolbar() {
             <option key={g} value={g}>{g}'</option>
           ))}
         </select>
+      </div>
+      <div className="group">
+        <label className="inline-field" title="Graphic style">
+          <span>Style</span>
+          <select className="input" value={doc.settings.graphic.preset} onChange={(e) => e.target.value !== 'custom' && A.applyPreset(e.target.value)}>
+            {PRESET_OPTIONS.map((o) => (
+              <option key={o.value} value={o.value} disabled={o.value === 'custom'}>{o.label}</option>
+            ))}
+          </select>
+        </label>
       </div>
       <div className="group">
         <button className="btn ghost" title="Zoom out" onClick={() => A.setZoom(zoom / 1.25)}>−</button>

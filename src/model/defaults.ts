@@ -70,6 +70,7 @@ export const DEFAULT_GRAPHIC: GraphicSettings = {
   fillOffset: 0,
   paper: 'none',
   labelFont: 'clean',
+  seed: 0,
 };
 
 export const DEFAULT_OVERLAP: OverlapSettings = {

@@ -13,6 +13,8 @@ import { drawLabels, drawPrims } from '../render/drawCanvas';
 import { GridLayer } from './layers/GridLayer';
 import { handlePosition, hitTest, topNodeAt } from './hitTest';
 import { pointer } from './pointer';
+import { loadWebFont } from '../render/fonts';
+import { PAPER_COLORS, paperTileUrl } from '../render/paper';
 
 const ACCENT = '#2f7de1';
 const HIT_TOL_PX = 7;
@@ -26,6 +28,11 @@ type Interaction =
   | { kind: 'resize'; id: Id }
   | { kind: 'marquee'; start: Point; additive: boolean }
   | { kind: 'connect'; from: Id };
+
+function paperStyle(paper: Parameters<typeof paperTileUrl>[0]): React.CSSProperties {
+  const url = paperTileUrl(paper);
+  return { backgroundColor: PAPER_COLORS[paper], backgroundImage: url ? `url(${url})` : undefined };
+}
 
 /** Stage scale (px per ft) from fresh store state. */
 const currentK = () => pxPerFt(getDoc().settings.scale, useUi.getState().view.zoom);
@@ -52,9 +59,20 @@ export function CanvasStage() {
   const selectedNodes = new Set(selection.nodes);
   const selectedConns = new Set(selection.connections);
   const selectedOverlaps = new Set(selection.overlaps);
-  const scene = useMemo(() => buildScene(doc), [doc]);
+  const fontEpoch = useUi((s) => s.fontEpoch);
+  const scene = useMemo(() => buildScene(doc), [doc, fontEpoch]);
   sceneRef.current = scene;
   const handleFor = tool === 'select' && selection.nodes.length === 1 ? selection.nodes[0] : null;
+
+  // ---- hand fonts: re-measure labels once the web font is ready ----
+  const labelFont = doc.settings.graphic.labelFont;
+  useEffect(() => {
+    let alive = true;
+    loadWebFont(labelFont).then(() => alive && useUi.getState().bumpFontEpoch());
+    return () => {
+      alive = false;
+    };
+  }, [labelFont]);
 
   // ---- sizing ----
   useEffect(() => {
@@ -352,6 +370,7 @@ export function CanvasStage() {
     <div
       ref={containerRef}
       className="canvas"
+      style={paperStyle(doc.settings.graphic.paper)}
       onMouseDown={onMouseDown}
       onContextMenu={(e) => e.preventDefault()}
       onMouseLeave={() => {

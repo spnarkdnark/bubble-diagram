@@ -40,8 +40,14 @@ const widthCache = new Map<string, number>();
 let family = LABEL_FONT_FAMILY;
 
 /** Forget cached text widths (call after a web font finishes loading). */
+let epoch = 0;
 export function clearTextMeasureCache() {
   widthCache.clear();
+  epoch++;
+}
+/** Bumps whenever cached measurements are invalidated. */
+export function measureEpoch(): number {
+  return epoch;
 }
 
 function measure(text: string, sizePt: number, weight: number): number {

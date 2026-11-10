@@ -37,6 +37,8 @@ export interface GraphicSettings {
   fillOffset: number;
   paper: Paper;
   labelFont: LabelFont;
+  /** changes every random stroke without changing the settings ("redraw with new hand") */
+  seed: number;
 }
 
 export type OverlapMode = 'none' | 'merge' | 'lens' | 'lensFill' | 'threshold';

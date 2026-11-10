@@ -9,6 +9,8 @@ import { nodeBounds, unionBounds } from '../../model/geometry';
 import { LABEL_FONT_FAMILY } from '../../model/defaults';
 import { ftToPt, getScale, niceScaleBarFt, PT_PER_IN, scaleBarSegments } from '../../model/units';
 import { buildScene, type Prim, type StrokeP } from '../../render/scene';
+import { outlineFont } from '../../render/fonts';
+import { PAPER_COLORS, paperCanvas } from '../../render/paper';
 
 export interface ExportOptions {
   includeGrid: boolean;
@@ -98,9 +100,15 @@ export function buildSvg(project: Project, opts: ExportOptions = DEFAULT_EXPORT_
   const k = toPt(1); // pt per ft
   const out: string[] = [];
   out.push(
-    `<svg xmlns="http://www.w3.org/2000/svg" width="${n(W / PT_PER_IN)}in" height="${n(H / PT_PER_IN)}in" viewBox="0 0 ${n(W)} ${n(H)}">`,
-    `<rect x="0" y="0" width="${n(W)}" height="${n(H)}" fill="#ffffff"/>`,
+    `<svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" width="${n(W / PT_PER_IN)}in" height="${n(H / PT_PER_IN)}in" viewBox="0 0 ${n(W)} ${n(H)}">`,
+    `<rect x="0" y="0" width="${n(W)}" height="${n(H)}" fill="${PAPER_COLORS[project.settings.graphic.paper]}"/>`,
   );
+  if (project.settings.graphic.paper !== 'none') {
+    // ~110 dpi texture, capped so very large sheets stay a reasonable file size
+    const dpi = Math.min(110, 4000 / Math.max(W / PT_PER_IN, H / PT_PER_IN));
+    const url = paperCanvas(project.settings.graphic.paper, (W / PT_PER_IN) * dpi, (H / PT_PER_IN) * dpi).toDataURL('image/jpeg', 0.85);
+    out.push(`<image x="0" y="0" width="${n(W)}" height="${n(H)}" preserveAspectRatio="none" href="${url}" xlink:href="${url}"/>`);
+  }
 
   if (opts.includeGrid) {
     const s = project.settings.grid.spacingFt;
@@ -127,11 +135,20 @@ export function buildSvg(project: Project, opts: ExportOptions = DEFAULT_EXPORT_
     const cy = Y(ns.label.y);
     for (const l of ns.label.layout.lines) {
       const baseline = cy + l.topPt + l.heightPt / 2 + l.sizePt * 0.35;
-      out.push(
-        `<text x="${n(cx)}" y="${n(baseline)}" text-anchor="middle" font-family="${esc(ns.label.fontFamily)}" font-size="${n(l.sizePt)}"${
-          l.weight === 600 ? ' font-weight="bold"' : ''
-        } fill="${l.color}">${esc(l.text)}</text>`,
-      );
+      const of = outlineFont(project.settings.graphic.labelFont, l.weight === 600);
+      if (of) {
+        // hand fonts become vector outlines so PDFs/SVGs need no installed font
+        const w = of.font.getAdvanceWidth(l.text, l.sizePt);
+        const d = of.font.getPath(l.text, cx - w / 2, baseline, l.sizePt).toPathData(2);
+        const bold = of.fakeBold ? ` stroke="${l.color}" stroke-width="${n(l.sizePt * 0.045)}" stroke-linejoin="round"` : '';
+        out.push(`<path d="${d}" fill="${l.color}"${bold}/>`);
+      } else {
+        out.push(
+          `<text x="${n(cx)}" y="${n(baseline)}" text-anchor="middle" font-family="${esc(ns.label.fontFamily)}" font-size="${n(l.sizePt)}"${
+            l.weight === 600 ? ' font-weight="bold"' : ''
+          } fill="${l.color}">${esc(l.text)}</text>`,
+        );
+      }
     }
   }
   out.push('</g>');

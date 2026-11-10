@@ -13,7 +13,7 @@ import { CONNECTION_COLOR, CONNECTION_STYLES, dashPatternPt, LABEL_FONT_FAMILY }
 import { darken, hexToRgb, rgbToHex } from '../model/color';
 import { ptToFt } from '../model/units';
 import { findOverlaps, hiddenInterval, mergeClusters, visibleArcs, type Interval, type Overlap } from '../model/overlaps';
-import { layoutLabel, type LabelLayout } from '../canvas/textLayout';
+import { layoutLabel, measureEpoch, type LabelLayout } from '../canvas/textLayout';
 import {
   hatchRegion,
   isClean,
@@ -92,6 +92,10 @@ export const LABEL_FONTS: Record<GraphicSettings['labelFont'], { family: string;
   pen: { family: "'Kalam', Helvetica, Arial, sans-serif", upper: false, label: 'Pen hand' },
 };
 
+function seeded(id: string, seed: number): string {
+  return seed ? `${id}~${seed}` : id;
+}
+
 function mix(a: string, b: string): string {
   const [r1, g1, b1] = hexToRgb(a);
   const [r2, g2, b2] = hexToRgb(b);
@@ -120,7 +124,7 @@ const nodeCache = new Map<Id, { key: string; scene: NodeScene }>();
 function nodeScene(node: BubbleNode, project: Project, style: ResolvedStyle, base: SketchParams, suppressOutline: boolean): NodeScene {
   const ftPerPt = ptToFt(1, project.settings.scale);
   const g = project.settings.graphic;
-  const key = JSON.stringify([node, style, base, suppressOutline, ftPerPt, g.labelFont]);
+  const key = JSON.stringify([node, style, base, suppressOutline, ftPerPt, g.labelFont, g.seed, measureEpoch()]);
   const hit = nodeCache.get(node.id);
   if (hit && hit.key === key) return hit.scene;
 
@@ -147,7 +151,7 @@ function nodeScene(node: BubbleNode, project: Project, style: ResolvedStyle, bas
   } else {
     const ring = sampleCircle(node.x, node.y, r, circleSamples(r, ftPerPt));
     const colors = { fill: style.fill, fillDark: darken(style.fill, 0.28), stroke: style.stroke };
-    const opts = { params, seed: node.id, unitsPerPt: ftPerPt };
+    const opts = { params, seed: seeded(node.id, g.seed), unitsPerPt: ftPerPt };
     fill = opsToPrims(sketchFill(ring, opts), colors, style.fillOpacity);
     outline = stroke
       ? opsToPrims(sketchClosedStroke(ring, { width: stroke.width, dash: stroke.dash }, opts), colors, 1).map((p) =>
@@ -200,6 +204,7 @@ function lensPolygon(A: { x: number; y: number; r: number }, B: { x: number; y: 
 
 export function buildScene(project: Project): Scene {
   const ftPerPt = ptToFt(1, project.settings.scale);
+  const sd = (id: string) => seeded(id, project.settings.graphic.seed);
   const base = graphicParams(project.settings.graphic);
   const ov = project.settings.overlap;
   const overlaps = findOverlaps(project);
@@ -254,10 +259,10 @@ export function buildScene(project: Project): Scene {
         else if (h) hidden.push(h);
       }
       const vis = all ? [] : visibleArcs(hidden);
-      vis.forEach((arc, i) => overlays.push(...arcPrims(A.x, A.y, A.r, arc, thick, params, `${id}:m${i}`, ftPerPt)));
+      vis.forEach((arc, i) => overlays.push(...arcPrims(A.x, A.y, A.r, arc, thick, params, sd(`${id}:m${i}`), ftPerPt)));
       if (inner) {
         const innerArcs: Interval[] = all ? [[0, Math.PI * 2]] : hidden;
-        innerArcs.forEach((arc, i) => overlays.push(...arcPrims(A.x, A.y, A.r, arc, inner, { ...params, overshoot: 0 }, `${id}:i${i}`, ftPerPt)));
+        innerArcs.forEach((arc, i) => overlays.push(...arcPrims(A.x, A.y, A.r, arc, inner, { ...params, overshoot: 0 }, sd(`${id}:i${i}`), ftPerPt)));
       }
     }
   }
@@ -275,7 +280,7 @@ export function buildScene(project: Project): Scene {
       if (isClean(params)) overlays.push({ t: 'path', pts: [o.p1, o.p2], closed: false, stroke: thick });
       else
         overlays.push(
-          ...opsToPrims(sketchOpenStroke([o.p1, o.p2], { width: thick.width }, { params, seed: `${o.key}:t`, unitsPerPt: ftPerPt }), {
+          ...opsToPrims(sketchOpenStroke([o.p1, o.p2], { width: thick.width }, { params, seed: sd(`${o.key}:t`), unitsPerPt: ftPerPt }), {
             fill: color,
             fillDark: color,
             stroke: color,
@@ -288,18 +293,18 @@ export function buildScene(project: Project): Scene {
       if (poly.length < 3) continue;
       const fill = darken(mix(styleOf(o.a).fill, styleOf(o.b).fill), 0.12);
       overlays.push({ t: 'path', pts: poly, closed: true, fill: { color: fill, alpha: 0.6 } });
-      const hatch = hatchRegion(poly, 45, 3 * ftPerPt, 0.5 * ftPerPt, `${o.key}:h`, ftPerPt);
+      const hatch = hatchRegion(poly, 45, 3 * ftPerPt, 0.5 * ftPerPt, sd(`${o.key}:h`), ftPerPt);
       overlays.push(...opsToPrims(hatch, { fill: color, fillDark: color, stroke: color }, 1));
     }
     // lens outline (also a thin edge for lensFill)
     const edge: StrokeP = o.mode === 'lens' ? thick : { ...thick, width: Math.max(0.75 * ftPerPt, overlapWidth * 0.4) };
     const ha = hiddenInterval(A, B);
     const hb = hiddenInterval(B, A);
-    if (ha === 'all') overlays.push(...arcPrims(A.x, A.y, A.r, [0, Math.PI * 2], edge, params, `${o.key}:la`, ftPerPt));
-    else if (hb === 'all') overlays.push(...arcPrims(B.x, B.y, B.r, [0, Math.PI * 2], edge, params, `${o.key}:lb`, ftPerPt));
+    if (ha === 'all') overlays.push(...arcPrims(A.x, A.y, A.r, [0, Math.PI * 2], edge, params, sd(`${o.key}:la`), ftPerPt));
+    else if (hb === 'all') overlays.push(...arcPrims(B.x, B.y, B.r, [0, Math.PI * 2], edge, params, sd(`${o.key}:lb`), ftPerPt));
     else {
-      if (ha) overlays.push(...arcPrims(A.x, A.y, A.r, ha, edge, params, `${o.key}:la`, ftPerPt));
-      if (hb) overlays.push(...arcPrims(B.x, B.y, B.r, hb, edge, params, `${o.key}:lb`, ftPerPt));
+      if (ha) overlays.push(...arcPrims(A.x, A.y, A.r, ha, edge, params, sd(`${o.key}:la`), ftPerPt));
+      if (hb) overlays.push(...arcPrims(B.x, B.y, B.r, hb, edge, params, sd(`${o.key}:lb`), ftPerPt));
     }
   }
 
@@ -326,7 +331,7 @@ export function buildScene(project: Project): Scene {
     if (isClean(base)) connections.push({ t: 'path', pts: seg, closed: false, stroke });
     else
       connections.push(
-        ...opsToPrims(sketchOpenStroke(seg, { width: stroke.width, dash: stroke.dash }, { params: base, seed: c.id, unitsPerPt: ftPerPt }), {
+        ...opsToPrims(sketchOpenStroke(seg, { width: stroke.width, dash: stroke.dash }, { params: base, seed: sd(c.id), unitsPerPt: ftPerPt }), {
           fill: CONNECTION_COLOR,
           fillDark: CONNECTION_COLOR,
           stroke: CONNECTION_COLOR,
