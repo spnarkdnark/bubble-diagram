@@ -105,6 +105,8 @@ Hand fonts are bundled via @fontsource; exports outline them with opentype.js
   (Shift = ±1"); Ctrl/⌘+wheel (and trackpad pinch) always zooms.
 - Pan: Space+drag or middle mouse. Marquee: drag on empty canvas (Shift adds).
 - Resize handle snaps radius to 6" (`settings.snap.radiusIncrementFt`); Shift = free.
+- Sidebar: a circle can be sized by radius, diameter or area (area sets radius =
+  sqrt(area/π), unsnapped so the sf is exact); multi-select applies to each circle.
 - Shortcuts: Del, ⌘/Ctrl+D, ⌘/Ctrl+A, arrows (1', Shift 10'), ⌘/Ctrl+Z / Shift+Z / Y,
   ⌘/Ctrl+S save, F zoom to fit, ⌘/Ctrl+0 100% (true paper size).
 

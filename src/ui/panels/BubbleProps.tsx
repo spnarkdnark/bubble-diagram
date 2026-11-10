@@ -2,9 +2,9 @@ import type { Id, StyleKey } from '../../model/types';
 import { useDoc } from '../../store/documentStore';
 import * as A from '../../store/actions';
 import { resolveStyle, totalArea } from '../../model/selectors';
-import { nodeArea, shapeSize } from '../../model/geometry';
+import { nodeArea, radiusFromArea, shapeSize } from '../../model/geometry';
 import { MIN_RADIUS_FT } from '../../model/defaults';
-import { formatArea, formatFeetInches, formatLengthCompact, parseLength } from '../../model/units';
+import { formatArea, formatFeetInches, formatLengthCompact, parseArea, parseLength } from '../../model/units';
 import { common, Field, NumberField, ReadOnly, Section, SelectField, TextField } from '../controls/Controls';
 import { StyleFields, type StyleSource } from './StyleFields';
 
@@ -17,6 +17,7 @@ export function BubbleProps({ ids }: { ids: Id[] }) {
   const circles = nodes.filter((n) => n.shape.kind === 'circle');
   const blobs = nodes.filter((n) => n.shape.kind === 'blob');
   const radius = common(circles, (n) => shapeSize(n.shape));
+  const circleIds = circles.map((n) => n.id);
   const anyOverrides = nodes.some((n) => Object.keys(n.style).length > 0);
   const catId = common(nodes, (n) => n.categoryId);
 
@@ -64,11 +65,28 @@ export function BubbleProps({ ids }: { ids: Id[] }) {
             parse={(s) => parseLength(s)}
             step={doc.settings.snap.radiusIncrementFt}
             min={MIN_RADIUS_FT}
-            onCommit={(v) => A.setRadius(ids, v)}
+            onCommit={(v) => A.setRadius(circleIds, v)}
           />
         </Field>
-        <Field label="Diameter">
-          <ReadOnly value={radius === null ? '—' : formatFeetInches(radius * 2)} />
+        <Field label="Diameter" hint={`Type 25 or 24'-6"`}>
+          <NumberField
+            value={radius === null ? null : radius * 2}
+            format={formatFeetInches}
+            parse={(s) => parseLength(s)}
+            step={doc.settings.snap.radiusIncrementFt * 2}
+            min={MIN_RADIUS_FT * 2}
+            onCommit={(v) => A.setRadius(circleIds, v / 2)}
+          />
+        </Field>
+        <Field label="Area" hint="Type the program area (e.g. 1200 or 1,200 sf); the radius is calculated from it">
+          <NumberField
+            value={common(circles, (n) => Math.round(nodeArea(n, doc)))}
+            format={formatArea}
+            parse={(s) => parseArea(s)}
+            step={10}
+            min={Math.ceil(Math.PI * MIN_RADIUS_FT * MIN_RADIUS_FT)}
+            onCommit={(v) => A.setRadius(circleIds, radiusFromArea(v))}
+          />
         </Field>
         </>
         )}
@@ -84,9 +102,16 @@ export function BubbleProps({ ids }: { ids: Id[] }) {
             />
           </Field>
         )}
-        <Field label={single ? 'Area' : 'Total area'}>
-          <ReadOnly value={single ? formatArea(nodeArea(nodes[0], doc)) : formatArea(totalArea(doc, ids))} />
-        </Field>
+        {blobs.length > 0 && single && (
+          <Field label="Area">
+            <ReadOnly value={formatArea(nodeArea(nodes[0], doc))} />
+          </Field>
+        )}
+        {!single && (
+          <Field label="Total area">
+            <ReadOnly value={formatArea(totalArea(doc, ids))} />
+          </Field>
+        )}
       </Section>
 
       <StyleFields src={src} />
