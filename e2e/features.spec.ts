@@ -135,3 +135,46 @@ test('CSV import, then export PDF, PNG and SVG with sketch style on', async ({ p
   }
   void ui;
 });
+
+test('shape points: drag off a ring frees it, double-click deletes it', async ({ page, canvas }) => {
+  await canvas.bubble(400, 400);
+  await page.keyboard.press('Escape');
+  await page.keyboard.press('s');
+  // click-place a triangle: first point on the ring (r + gap = 12 ft = 144 px right of center)
+  await canvas.click(544, 400);
+  await canvas.click(700, 250);
+  await canvas.click(700, 550);
+  await page.keyboard.press('Enter');
+  const shapeOf = async () => (await nodes(page)).find((n) => n.shape.kind === 'blob');
+  expect((await shapeOf()).shape.points[0].t).toBe('anchor');
+  // drag the anchored point well away from the ring: it becomes free
+  await canvas.drag([544, 400], [620, 400]);
+  expect((await shapeOf()).shape.points[0].t).toBe('free');
+  // drag it back near the ring: it re-attaches
+  await canvas.drag([620, 400], [546, 402]);
+  expect((await shapeOf()).shape.points[0].t).toBe('anchor');
+  // double-click on the outline (between points 2 and 3) adds a point; double-click on it deletes it
+  const onEdge = await page.evaluate(() => {
+    const bd = (window as any).__bd;
+    const s = bd.doc.getState().history.present;
+    const v = bd.ui.getState().view;
+    const k = 12 * v.zoom; // px per ft at 1/8" = 1'-0"
+    const n = Object.values(s.nodes).find((x: any) => x.shape.kind === 'blob');
+    const geo = bd.blobGeometry(n, s);
+    const idx =
+      geo.seg.findIndex((sg: number) => sg === 1) + Math.floor(geo.seg.filter((sg: number) => sg === 1).length / 2);
+    return { x: geo.poly[idx].x * k + v.panX, y: geo.poly[idx].y * k + v.panY };
+  });
+  await canvas.dblclick(onEdge.x, onEdge.y);
+  expect((await shapeOf()).shape.points).toHaveLength(4);
+  await canvas.dblclick(onEdge.x, onEdge.y);
+  expect((await shapeOf()).shape.points).toHaveLength(3);
+});
+
+test('drag from one bubble to another connects them', async ({ page, canvas }) => {
+  await canvas.bubble(300, 300);
+  await canvas.bubble(700, 300);
+  await page.keyboard.press('c');
+  await canvas.drag([300, 300], [700, 300]);
+  expect(Object.keys((await doc(page)).connections)).toHaveLength(1);
+});
