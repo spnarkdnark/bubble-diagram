@@ -1,0 +1,12 @@
+name,radius,category,area
+Lobby,,Public,1800
+Gallery,,Public,2400
+Cafe,,Public,900
+Classroom A,,Private,850
+Classroom B,,Private,850
+Library,18,Private,
+Admin Office,,Staff,600
+Staff Lounge,,Staff,400
+Loading Dock,,Service,700
+Storage,8'-6",Service,
+Mechanical,,Service,500

@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
-import { newProject, openProject, saveProject } from '../io/fileActions';
+import { importCsv, newProject, openProject, saveProject } from '../io/fileActions';
 
 export interface MenuItem {
   label: string;
@@ -55,6 +55,7 @@ export function FileMenu() {
           { label: 'New diagram', onClick: newProject },
           { label: 'Open…', kbd: 'Ctrl O', onClick: openProject },
           { label: 'Save', kbd: 'Ctrl S', onClick: saveProject },
+          { label: 'Import CSV…', onClick: importCsv, separator: true },
         ]}
       />
     </div>

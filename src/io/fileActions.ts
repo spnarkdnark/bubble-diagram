@@ -31,3 +31,32 @@ export function saveProject() {
   saveProjectFile(getDoc());
   toast('Project saved');
 }
+
+export async function importCsv() {
+  const { pickFile } = await import('./download');
+  const { parseCsv, buildImport } = await import('./csvImport');
+  const { viewCenterWorld, selectNodes } = await import('../store/actions');
+  const file = await pickFile('.csv,text/csv');
+  if (!file) return;
+  const { rows, errors } = parseCsv(await file.text());
+  if (rows.length === 0) {
+    toast(`CSV import failed: ${errors[0] ?? 'no rows found.'}`);
+    return;
+  }
+  const { nodes, categories } = buildImport(getDoc(), rows, viewCenterWorld());
+  useDocument.getState().commit((d) => {
+    for (const c of categories) {
+      d.categories[c.id] = c;
+      d.categoryOrder.push(c.id);
+    }
+    for (const n of nodes) {
+      d.nodes[n.id] = n;
+      d.nodeOrder.push(n.id);
+    }
+  });
+  selectNodes(nodes.map((n) => n.id));
+  requestAnimationFrame(zoomToFit);
+  const skipped = errors.length ? ` (${errors.length} row${errors.length > 1 ? 's' : ''} skipped)` : '';
+  toast(`Imported ${nodes.length} bubbles${skipped}`);
+  if (errors.length) console.warn('CSV import warnings:\n' + errors.join('\n'));
+}
