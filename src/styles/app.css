@@ -119,3 +119,5 @@ kbd { font-family: var(--mono); font-size: 11px; border: 1px solid var(--line-st
 .info { color: var(--muted); font-size: 12px; }
 
 .toast { position: fixed; bottom: 20px; left: 50%; transform: translateX(-50%); background: var(--text); color: #fff; padding: 9px 14px; border-radius: var(--radius); font-size: 12px; z-index: 40; box-shadow: 0 6px 20px rgba(0,0,0,0.15); max-width: 80vw; }
+.segmented-row { display: grid; grid-template-columns: repeat(3, 1fr); gap: 4px; }
+.segmented-row .seg { justify-content: center; }

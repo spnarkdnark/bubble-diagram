@@ -32,6 +32,10 @@ export function useKeyboardShortcuts(handlers: ShortcutHandlers = {}) {
 
       // Undo/redo/save work even while typing? Only outside text fields (let inputs undo text).
       if (isTyping(e)) return;
+      if (ui.exportOpen) {
+        if (e.key === 'Escape') ui.setExportOpen(false);
+        return;
+      }
 
       if (mod && key === 'z') {
         e.preventDefault();

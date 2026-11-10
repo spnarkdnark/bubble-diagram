@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
+import { useUi } from '../store/uiStore';
 import { importCsv, newProject, openProject, saveProject } from '../io/fileActions';
 
 export interface MenuItem {
@@ -58,6 +59,9 @@ export function FileMenu() {
           { label: 'Import CSV…', onClick: importCsv, separator: true },
         ]}
       />
+      <button className="btn primary" onClick={() => useUi.getState().setExportOpen(true)}>
+        Export
+      </button>
     </div>
   );
 }

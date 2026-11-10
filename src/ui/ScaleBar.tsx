@@ -1,22 +1,13 @@
 import { useDoc } from '../store/documentStore';
 import { useUi } from '../store/uiStore';
-import { getScale, pxPerFt } from '../model/units';
-
-const NICE_FT = [1, 2, 4, 5, 8, 10, 16, 20, 25, 32, 40, 50, 64, 100, 200, 250, 500, 1000];
-
-/** Pick a nice bar length (ft) whose on-screen length is near `targetPx`. */
-export function niceBarLength(pxPerFoot: number, targetPx = 140): number {
-  let best = NICE_FT[0];
-  for (const f of NICE_FT) if (f * pxPerFoot <= targetPx) best = f;
-  return best;
-}
+import { getScale, niceScaleBarFt, pxPerFt, scaleBarSegments } from '../model/units';
 
 export function ScaleBar() {
   const doc = useDoc();
   const zoom = useUi((s) => s.view.zoom);
   const k = pxPerFt(doc.settings.scale, zoom);
-  const len = niceBarLength(k);
-  const segs = len % 4 === 0 || len % 5 !== 0 ? 4 : 5;
+  const len = niceScaleBarFt(k, 140);
+  const segs = scaleBarSegments(len);
   const w = len * k;
   return (
     <div className="scalebar" aria-label="Scale bar">

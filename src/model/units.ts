@@ -104,3 +104,17 @@ export function parseArea(input: string | number): number | null {
   if (!/^\d*\.?\d+$/.test(s)) return null;
   return parseFloat(s);
 }
+
+const NICE_BAR_FT = [1, 2, 4, 5, 8, 10, 16, 20, 25, 32, 40, 50, 64, 100, 200, 250, 500, 1000];
+
+/** Largest "nice" scale-bar length (ft) whose drawn length stays within `maxUnits`. */
+export function niceScaleBarFt(unitsPerFt: number, maxUnits: number): number {
+  let best = NICE_BAR_FT[0];
+  for (const f of NICE_BAR_FT) if (f * unitsPerFt <= maxUnits) best = f;
+  return best;
+}
+
+/** Scale bar segment count: 4 for lengths divisible by 4 or not by 5, else 5. */
+export function scaleBarSegments(lenFt: number): number {
+  return lenFt % 4 === 0 || lenFt % 5 !== 0 ? 4 : 5;
+}

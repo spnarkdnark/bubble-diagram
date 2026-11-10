@@ -4,6 +4,7 @@ import { Toolbar } from './ui/Toolbar';
 import { PropertiesPanel } from './ui/panels/PropertiesPanel';
 import { ScaleBar } from './ui/ScaleBar';
 import { Toast } from './ui/Toast';
+import { ExportDialog } from './ui/ExportDialog';
 import { useKeyboardShortcuts } from './hooks/useKeyboardShortcuts';
 import { installSelectionPruning } from './store/actions';
 import { installAutosave } from './io/autosave';
@@ -25,6 +26,7 @@ export function App() {
         </div>
         <PropertiesPanel />
       </main>
+      <ExportDialog />
       <Toast />
     </div>
   );
