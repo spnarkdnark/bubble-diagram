@@ -5,8 +5,8 @@
  */
 import type { Bounds, Project } from '../../model/types';
 import { connectionSegment, nodeBounds, unionBounds } from '../../model/geometry';
-import { connectionsList, orderedNodes, resolveFill, resolveStroke } from '../../model/selectors';
-import { CONNECTION_COLOR, CONNECTION_STYLES, dashPatternPt, LABEL_COLOR, LABEL_FONT_FAMILY } from '../../model/defaults';
+import { connectionsList, orderedNodes, resolveStyle } from '../../model/selectors';
+import { CONNECTION_COLOR, CONNECTION_STYLES, dashPatternPt, LABEL_FONT_FAMILY } from '../../model/defaults';
 import { ftToPt, getScale, niceScaleBarFt, PT_PER_IN, scaleBarSegments } from '../../model/units';
 import { layoutLabel } from '../../canvas/textLayout';
 
@@ -79,7 +79,8 @@ export function buildSvg(project: Project, opts: ExportOptions = DEFAULT_EXPORT_
     const seg = connectionSegment(a, b);
     if (!seg) continue;
     const st = CONNECTION_STYLES[c.type];
-    const dash = st.style === 'dashed' ? ` stroke-dasharray="${dashPatternPt(st.weightPt).join(' ')}"` : '';
+    const dp = dashPatternPt(st.style, st.weightPt);
+    const dash = dp ? ` stroke-dasharray="${dp.join(' ')}"` : '';
     out.push(
       `<line x1="${n(X(seg[0].x))}" y1="${n(Y(seg[0].y))}" x2="${n(X(seg[1].x))}" y2="${n(Y(seg[1].y))}" stroke="${CONNECTION_COLOR}" stroke-width="${st.weightPt}"${dash}/>`,
     );
@@ -90,24 +91,25 @@ export function buildSvg(project: Project, opts: ExportOptions = DEFAULT_EXPORT_
   for (const nd of nodes) {
     const cx = X(nd.x);
     const cy = Y(nd.y);
-    const st = nd.style;
+    const st = resolveStyle(nd, project);
+    const dp = dashPatternPt(st.strokeStyle, st.strokeWeightPt);
     const stroke =
       st.strokeWeightPt > 0
-        ? ` stroke="${resolveStroke(nd, project)}" stroke-width="${st.strokeWeightPt}"${
-            st.strokeStyle === 'dashed' ? ` stroke-dasharray="${dashPatternPt(st.strokeWeightPt).join(' ')}"` : ''
+        ? ` stroke="${st.stroke}" stroke-width="${st.strokeWeightPt}"${dp ? ` stroke-dasharray="${dp.join(' ')}"` : ''}${
+            st.strokeStyle === 'dotted' ? ' stroke-linecap="round"' : ''
           }`
         : '';
     out.push(`<g id="bubble-${esc(nd.id)}">`);
     out.push(
-      `<circle cx="${n(cx)}" cy="${n(cy)}" r="${n(toPt(nd.shape.radiusFt))}" fill="${resolveFill(nd, project)}" fill-opacity="${st.fillOpacity}"${stroke}/>`,
+      `<circle cx="${n(cx)}" cy="${n(cy)}" r="${n(toPt(nd.shape.radiusFt))}" fill="${st.fill}" fill-opacity="${st.fillOpacity}"${stroke}/>`,
     );
-    for (const l of layoutLabel(nd, scale).lines) {
+    for (const l of layoutLabel(nd, project, st).lines) {
       // approximate vertical centering of the glyphs within the line box
       const baseline = cy + l.topPt + l.heightPt / 2 + l.sizePt * 0.35;
       out.push(
         `<text x="${n(cx)}" y="${n(baseline)}" text-anchor="middle" font-family="${LABEL_FONT_FAMILY}" font-size="${n(l.sizePt)}"${
           l.weight === 600 ? ' font-weight="bold"' : ''
-        } fill="${l.secondary ? '#555555' : LABEL_COLOR}">${esc(l.text)}</text>`,
+        } fill="${l.color}">${esc(l.text)}</text>`,
       );
     }
     out.push('</g>');

@@ -2,13 +2,22 @@
  * Shape geometry. Every `switch (shape.kind)` in the app should live here so
  * adding ellipses / rounded rectangles is a local change.
  */
-import type { Bounds, BubbleNode, Point, Shape } from './types';
+import type { Bounds, BubbleNode, Point, Project, Shape } from './types';
 
 export function shapeArea(shape: Shape): number {
   switch (shape.kind) {
     case 'circle':
       return Math.PI * shape.radiusFt * shape.radiusFt;
   }
+}
+
+/** Area in sf. `project` is needed by shapes whose geometry depends on other nodes. */
+export function nodeArea(node: BubbleNode, _project?: Project): number {
+  return shapeArea(node.shape);
+}
+
+export function isCircle(node: BubbleNode): boolean {
+  return node.shape.kind === 'circle';
 }
 
 export function radiusFromArea(areaSf: number): number {

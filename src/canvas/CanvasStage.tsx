@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
 import { Circle, Layer, Line, Rect, Stage, Label, Tag, Text } from 'react-konva';
 import type { Bounds, Id, Point } from '../model/types';
-import { orderedNodes, resolveFill, resolveStroke } from '../model/selectors';
+import { orderedNodes, resolveStyle } from '../model/selectors';
 import { boundaryPoint, shapeSize, withSize } from '../model/geometry';
 import { MIN_RADIUS_FT } from '../model/defaults';
 import { formatFeetInches, pxPerFt, snap } from '../model/units';
@@ -360,7 +360,7 @@ export function CanvasStage() {
         </Layer>
         <Layer listening={false}>
           {nodes.map((n) => (
-            <BubbleShape key={n.id} node={n} fill={resolveFill(n, doc)} stroke={resolveStroke(n, doc)} scale={doc.settings.scale} k={k} />
+            <BubbleShape key={n.id} node={n} style={resolveStyle(n, doc)} project={doc} k={k} />
           ))}
         </Layer>
         <Layer listening={false}>

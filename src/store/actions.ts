@@ -5,15 +5,16 @@
 import type { Draft } from 'immer';
 import type {
   BubbleNode,
-  Category,
   ConnectionType,
   Id,
   Point,
   Project,
   ScaleId,
+  StyleKey,
+  StyleProps,
 } from '../model/types';
 import { createCategory, createConnection, createNode, newId, nextCategoryColor } from '../model/factory';
-import { findConnection } from '../model/selectors';
+import { findConnection, resolveStyle } from '../model/selectors';
 import { boundsCenter, intersectsRect, nodeBounds, shapeSize, unionBounds, withSize } from '../model/geometry';
 import { DUPLICATE_OFFSET_FT, MIN_RADIUS_FT } from '../model/defaults';
 import { pxPerFt, stepToIncrement } from '../model/units';
@@ -205,16 +206,27 @@ export function addCategory(name = 'New category'): Id {
   return c.id;
 }
 
-export function updateCategory(id: Id, patch: Partial<Omit<Category, 'id'>>, coalesce = true) {
+export function renameCategory(id: Id, name: string) {
   commit(
     (d) => {
-      if (d.categories[id]) Object.assign(d.categories[id], patch);
+      if (d.categories[id]) d.categories[id].name = name;
     },
-    coalesce ? { coalesceKey: `cat:${id}:${Object.keys(patch).join(',')}` } : undefined,
+    { coalesceKey: `cat-name:${id}` },
   );
 }
 
-/** Deleting a category un-assigns its bubbles but keeps their look (color baked in). */
+/** Set one style property on a category, or on the uncategorized default when id is null. */
+export function setCategoryStyle<K extends StyleKey>(id: Id | null, key: K, value: StyleProps[K]) {
+  commit(
+    (d) => {
+      const target = id ? d.categories[id]?.style : d.settings.defaultStyle;
+      if (target) (target as StyleProps)[key] = value;
+    },
+    { coalesceKey: `cat-style:${id}:${key}` },
+  );
+}
+
+/** Deleting a category un-assigns its bubbles but keeps their look (style baked in as overrides). */
 export function deleteCategory(id: Id) {
   commit((d) => {
     const cat = d.categories[id];
@@ -222,11 +234,45 @@ export function deleteCategory(id: Id) {
     for (const n of Object.values(d.nodes)) {
       if (n.categoryId === id) {
         n.categoryId = null;
-        if (n.style.fill === null) n.style.fill = cat.color;
+        n.style = { ...cat.style, ...n.style };
       }
     }
     delete d.categories[id];
     d.categoryOrder = d.categoryOrder.filter((c) => c !== id);
+  });
+}
+
+// ---------- styles ----------
+
+export function setNodeStyle<K extends StyleKey>(ids: Id[], key: K, value: StyleProps[K], coalesce = true) {
+  updateNodes(
+    ids,
+    (n) => {
+      (n.style as StyleProps)[key] = value;
+    },
+    coalesce ? `style:${key}` : undefined,
+  );
+}
+
+export function resetNodeStyle(ids: Id[], keys?: StyleKey[]) {
+  updateNodes(ids, (n) => {
+    if (!keys) n.style = {};
+    else for (const k of keys) delete n.style[k];
+  });
+}
+
+/** Push one node's resolved look up to its category and clear that node's overrides. */
+export function makeCategoryStyle(nodeId: Id) {
+  const doc = getDoc();
+  const node = doc.nodes[nodeId];
+  if (!node?.categoryId) return;
+  const style = resolveStyle(node, doc);
+  const catId = node.categoryId;
+  commit((d) => {
+    const s: StyleProps = { ...style };
+    if (node.style.stroke === undefined) s.stroke = d.categories[catId].style.stroke;
+    d.categories[catId].style = s;
+    d.nodes[nodeId].style = {};
   });
 }
 

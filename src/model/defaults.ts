@@ -1,4 +1,11 @@
-import type { ConnectionType, DrawingSettings, NodeLabel, NodeStyle, StrokeStyle } from './types';
+import type {
+  ConnectionType,
+  DrawingSettings,
+  GraphicSettings,
+  OverlapSettings,
+  StrokeStyle,
+  StyleProps,
+} from './types';
 import { DEFAULT_SCALE } from './units';
 
 /** Light, muted palette for categories (cycled for new categories). */
@@ -13,15 +20,38 @@ export const CATEGORY_PALETTE = [
   '#d6b9a3', // clay
 ];
 
-export const DEFAULT_CATEGORIES: { name: string; color: string }[] = [
-  { name: 'Public', color: CATEGORY_PALETTE[0] },
-  { name: 'Private', color: CATEGORY_PALETTE[2] },
-  { name: 'Service', color: CATEGORY_PALETTE[1] },
-  { name: 'Staff', color: CATEGORY_PALETTE[3] },
-];
-
-/** Fill used when a bubble has no category and follows category color. */
+/** Fill used for elements without a category. */
 export const UNCATEGORIZED_FILL = '#dcdcdc';
+
+export const DEFAULT_STYLE: StyleProps = {
+  fill: UNCATEGORIZED_FILL,
+  fillOpacity: 0.85,
+  stroke: null,
+  strokeWeightPt: 0.75,
+  strokeStyle: 'solid',
+  labelSizePt: 9,
+  labelColor: '#2b2b2b',
+  labelBold: true,
+  labelSecondary: 'area',
+  sketchAmount: 1,
+};
+
+export function styleWithFill(fill: string, extra: Partial<StyleProps> = {}): StyleProps {
+  return { ...DEFAULT_STYLE, fill, ...extra };
+}
+
+export const EXTERIOR_CATEGORY = 'Exterior';
+
+export const DEFAULT_CATEGORIES: { name: string; style: StyleProps }[] = [
+  { name: 'Public', style: styleWithFill(CATEGORY_PALETTE[0]) },
+  { name: 'Private', style: styleWithFill(CATEGORY_PALETTE[2]) },
+  { name: 'Service', style: styleWithFill(CATEGORY_PALETTE[1]) },
+  { name: 'Staff', style: styleWithFill(CATEGORY_PALETTE[3]) },
+  {
+    name: EXTERIOR_CATEGORY,
+    style: styleWithFill('#cfdcc4', { fillOpacity: 0.55, strokeStyle: 'dashed', labelBold: false }),
+  },
+];
 
 export const DEFAULT_RADIUS_FT = 10;
 export const MIN_RADIUS_FT = 0.5;
@@ -30,24 +60,36 @@ export const NUDGE_FT = 1;
 export const NUDGE_BIG_FT = 10;
 export const DUPLICATE_OFFSET_FT = 5;
 
+export const DEFAULT_GRAPHIC: GraphicSettings = {
+  preset: 'clean',
+  wobble: 0,
+  overshoot: 0,
+  passes: 1,
+  pressure: 0,
+  fillStyle: 'flat',
+  fillOffset: 0,
+  paper: 'none',
+  labelFont: 'clean',
+};
+
+export const DEFAULT_OVERLAP: OverlapSettings = {
+  mode: 'merge',
+  weightPt: 2.5,
+  color: 'largest',
+  innerArcs: 'hidden',
+};
+
 export const DEFAULT_SETTINGS: DrawingSettings = {
   scale: DEFAULT_SCALE,
   unitSystem: 'imperial',
   grid: { visible: true, spacingFt: 10 },
   snap: { radiusIncrementFt: RADIUS_SNAP_FT },
+  defaultStyle: DEFAULT_STYLE,
+  graphic: DEFAULT_GRAPHIC,
+  overlap: DEFAULT_OVERLAP,
 };
 
 export const GRID_SPACINGS_FT = [1, 2, 5, 10, 20, 25, 50];
-
-export const DEFAULT_NODE_STYLE: NodeStyle = {
-  fill: null,
-  fillOpacity: 0.85,
-  stroke: null,
-  strokeWeightPt: 0.75,
-  strokeStyle: 'solid',
-};
-
-export const DEFAULT_LABEL: NodeLabel = { fontSizePt: 9, secondary: 'area' };
 
 /** Darkening applied to fill to derive an "auto" outline. */
 export const AUTO_STROKE_DARKEN = 0.35;
@@ -63,11 +105,13 @@ export const CONNECTION_STYLES: Record<
   visual: { label: 'Visual / indirect', weightPt: 1, style: 'dashed' },
 };
 
-/** Dash pattern in paper points, scaled by stroke weight for legibility. */
-export function dashPatternPt(weightPt: number): [number, number] {
+/** Dash pattern [on, off] in paper points for a stroke style and weight; null = solid. */
+export function dashPatternPt(style: StrokeStyle, weightPt: number): [number, number] | null {
   const w = Math.max(weightPt, 0.5);
-  return [Math.max(4, w * 4), Math.max(3, w * 3)];
+  if (style === 'dashed') return [Math.max(4, w * 4), Math.max(3, w * 3)];
+  if (style === 'dotted') return [0.01, Math.max(2, w * 2.5)];
+  return null;
 }
 
 export const LABEL_FONT_FAMILY = 'Helvetica, Arial, sans-serif';
-export const LABEL_COLOR = '#2b2b2b';
+export const SECONDARY_LABEL_COLOR = '#555555';

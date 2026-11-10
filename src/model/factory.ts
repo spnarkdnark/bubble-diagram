@@ -1,24 +1,18 @@
 import { nanoid } from 'nanoid';
-import type { BubbleNode, Category, Connection, ConnectionType, Id, Project } from './types';
+import type { BubbleNode, Category, Connection, ConnectionType, Id, Project, StyleProps } from './types';
 import { SCHEMA_VERSION } from './types';
-import {
-  CATEGORY_PALETTE,
-  DEFAULT_CATEGORIES,
-  DEFAULT_LABEL,
-  DEFAULT_NODE_STYLE,
-  DEFAULT_RADIUS_FT,
-  DEFAULT_SETTINGS,
-} from './defaults';
+import { CATEGORY_PALETTE, DEFAULT_CATEGORIES, DEFAULT_RADIUS_FT, DEFAULT_SETTINGS, styleWithFill } from './defaults';
 
 export const newId = (): Id => nanoid(10);
 
-export function createCategory(name: string, color: string): Category {
-  return { id: newId(), name, color };
+export function createCategory(name: string, styleOrColor: StyleProps | string): Category {
+  const style = typeof styleOrColor === 'string' ? styleWithFill(styleOrColor) : { ...styleOrColor };
+  return { id: newId(), name, style };
 }
 
 export function createProject(name = 'Untitled diagram'): Project {
   const now = new Date().toISOString();
-  const cats = DEFAULT_CATEGORIES.map((c) => createCategory(c.name, c.color));
+  const cats = DEFAULT_CATEGORIES.map((c) => createCategory(c.name, c.style));
   return {
     schemaVersion: SCHEMA_VERSION,
     meta: { name, createdAt: now, modifiedAt: now },
@@ -28,6 +22,7 @@ export function createProject(name = 'Untitled diagram'): Project {
     nodes: {},
     nodeOrder: [],
     connections: {},
+    overlaps: {},
   };
 }
 
@@ -39,8 +34,7 @@ export function createNode(partial: Partial<Omit<BubbleNode, 'id'>> = {}): Bubbl
     y: partial.y ?? 0,
     shape: partial.shape ?? { kind: 'circle', radiusFt: DEFAULT_RADIUS_FT },
     categoryId: partial.categoryId ?? null,
-    style: { ...DEFAULT_NODE_STYLE, ...partial.style },
-    label: { ...DEFAULT_LABEL, ...partial.label },
+    style: { ...partial.style },
   };
 }
 
@@ -50,7 +44,7 @@ export function createConnection(from: Id, to: Id, type: ConnectionType = 'near'
 
 /** Next palette color not already used by a category (cycles if all used). */
 export function nextCategoryColor(project: Project): string {
-  const used = new Set(Object.values(project.categories).map((c) => c.color.toLowerCase()));
+  const used = new Set(Object.values(project.categories).map((c) => c.style.fill.toLowerCase()));
   return (
     CATEGORY_PALETTE.find((c) => !used.has(c.toLowerCase())) ??
     CATEGORY_PALETTE[project.categoryOrder.length % CATEGORY_PALETTE.length]

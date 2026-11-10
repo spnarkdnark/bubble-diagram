@@ -16,12 +16,44 @@ export interface DrawingSettings {
   unitSystem: UnitSystem;
   grid: { visible: boolean; spacingFt: number };
   snap: { radiusIncrementFt: number };
+  /** style for elements without a category */
+  defaultStyle: StyleProps;
+  graphic: GraphicSettings;
+  overlap: OverlapSettings;
+}
+
+export type FillStyle = 'flat' | 'wash' | 'hatch' | 'pencil';
+export type Paper = 'none' | 'trace' | 'warm';
+export type LabelFont = 'clean' | 'architect' | 'pen';
+
+/** Global hand-drawn character (see render/sketch.ts). */
+export interface GraphicSettings {
+  preset: string;
+  wobble: number;
+  overshoot: number;
+  passes: number;
+  pressure: number;
+  fillStyle: FillStyle;
+  fillOffset: number;
+  paper: Paper;
+  labelFont: LabelFont;
+}
+
+export type OverlapMode = 'none' | 'merge' | 'lens' | 'lensFill' | 'threshold';
+export type OverlapColor = 'largest' | 'blend' | 'dark';
+
+export interface OverlapSettings {
+  mode: OverlapMode;
+  weightPt: number;
+  color: OverlapColor;
+  /** merge mode: how the hidden inner arcs are drawn */
+  innerArcs: 'hidden' | 'thin' | 'dashed';
 }
 
 export interface Category {
   id: Id;
   name: string;
-  color: string; // hex #rrggbb
+  style: StyleProps;
 }
 
 /**
@@ -37,23 +69,31 @@ export interface CircleShape {
   radiusFt: number;
 }
 
-export type StrokeStyle = 'solid' | 'dashed';
+export type StrokeStyle = 'solid' | 'dashed' | 'dotted';
 export type LabelSecondary = 'none' | 'radius' | 'area';
 
-export interface NodeStyle {
-  /** null = follow category color */
-  fill: string | null;
+/**
+ * The complete visual style of an element. Categories (and the project's
+ * uncategorized default) hold a full StyleProps; elements hold only the
+ * properties they override (StyleOverrides). Resolve with selectors.resolveStyle.
+ */
+export interface StyleProps {
+  fill: string;
   fillOpacity: number; // 0..1
-  /** null = auto (derived darker tint of the effective fill) */
+  /** null = auto (darkened fill) */
   stroke: string | null;
   strokeWeightPt: number;
   strokeStyle: StrokeStyle;
+  labelSizePt: number;
+  labelColor: string;
+  labelBold: boolean;
+  labelSecondary: LabelSecondary;
+  /** multiplier on the global sketch character (1 = as set globally, 0 = clean) */
+  sketchAmount: number;
 }
 
-export interface NodeLabel {
-  fontSizePt: number;
-  secondary: LabelSecondary;
-}
+export type StyleKey = keyof StyleProps;
+export type StyleOverrides = Partial<StyleProps>;
 
 export interface BubbleNode {
   id: Id;
@@ -63,8 +103,8 @@ export interface BubbleNode {
   y: number;
   shape: Shape;
   categoryId: Id | null;
-  style: NodeStyle;
-  label: NodeLabel;
+  /** only the properties that differ from the category style */
+  style: StyleOverrides;
   // Future: layerId?: Id; locked?: boolean;
 }
 
@@ -83,7 +123,7 @@ export interface ProjectMeta {
   modifiedAt: string;
 }
 
-export const SCHEMA_VERSION = 1 as const;
+export const SCHEMA_VERSION = 2 as const;
 
 export interface Project {
   schemaVersion: typeof SCHEMA_VERSION;
@@ -95,6 +135,8 @@ export interface Project {
   /** z-order, back to front */
   nodeOrder: Id[];
   connections: Record<Id, Connection>;
+  /** per-overlap overrides keyed by overlapKey(a, b) */
+  overlaps: Record<string, { mode: OverlapMode }>;
 }
 
 export interface Point {

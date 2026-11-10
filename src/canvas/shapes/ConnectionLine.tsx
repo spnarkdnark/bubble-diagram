@@ -28,7 +28,7 @@ export const ConnectionLine = memo(function ConnectionLine({ a, b, type, scale, 
         points={points}
         stroke={selected ? '#2f7de1' : CONNECTION_COLOR}
         strokeWidth={ptToFt(st.weightPt, scale)}
-        dash={st.style === 'dashed' ? dashPatternPt(st.weightPt).map((v) => ptToFt(v, scale)) : undefined}
+        dash={dashPatternPt(st.style, st.weightPt)?.map((v) => ptToFt(v, scale))}
         lineCap="butt"
         listening={false}
         perfectDrawEnabled={false}

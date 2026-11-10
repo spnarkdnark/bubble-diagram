@@ -1,26 +1,45 @@
-import type { BubbleNode, Connection, Project } from './types';
-import { AUTO_STROKE_DARKEN, UNCATEGORIZED_FILL } from './defaults';
+import type { BubbleNode, Connection, Project, StyleKey, StyleProps } from './types';
+import { AUTO_STROKE_DARKEN } from './defaults';
 import { darken } from './color';
-import { shapeArea, shapeSize } from './geometry';
+import { nodeArea, shapeSize } from './geometry';
 import { formatArea, formatLengthShort } from './units';
 
-/** Effective fill: explicit override, else category color, else neutral gray. */
-export function resolveFill(node: BubbleNode, project: Project): string {
-  if (node.style.fill) return node.style.fill;
+export type ResolvedStyle = StyleProps & { stroke: string };
+
+/** Base style an element inherits: its category's, or the project default. */
+export function baseStyle(node: Pick<BubbleNode, 'categoryId'>, project: Project): StyleProps {
   const cat = node.categoryId ? project.categories[node.categoryId] : undefined;
-  return cat?.color ?? UNCATEGORIZED_FILL;
+  return cat?.style ?? project.settings.defaultStyle;
+}
+
+/** Category/default style with the element's overrides applied; stroke resolved. */
+export function resolveStyle(node: BubbleNode, project: Project): ResolvedStyle {
+  const s: StyleProps = { ...baseStyle(node, project) };
+  for (const k of Object.keys(node.style) as StyleKey[]) {
+    const v = node.style[k];
+    if (v !== undefined) (s as any)[k] = v;
+  }
+  return { ...s, stroke: s.stroke ?? darken(s.fill, AUTO_STROKE_DARKEN) };
+}
+
+export function resolveFill(node: BubbleNode, project: Project): string {
+  return resolveStyle(node, project).fill;
 }
 
 export function resolveStroke(node: BubbleNode, project: Project): string {
-  return node.style.stroke ?? darken(resolveFill(node, project), AUTO_STROKE_DARKEN);
+  return resolveStyle(node, project).stroke;
 }
 
-export function secondaryLabel(node: BubbleNode): string | null {
-  switch (node.label.secondary) {
+export function isOverridden(node: BubbleNode, key: StyleKey): boolean {
+  return node.style[key] !== undefined;
+}
+
+export function secondaryLabel(node: BubbleNode, project: Project, style = resolveStyle(node, project)): string | null {
+  switch (style.labelSecondary) {
     case 'radius':
-      return `R ${formatLengthShort(shapeSize(node.shape))}`;
+      return node.shape.kind === 'circle' ? `R ${formatLengthShort(shapeSize(node.shape))}` : formatArea(nodeArea(node, project));
     case 'area':
-      return formatArea(shapeArea(node.shape));
+      return formatArea(nodeArea(node, project));
     default:
       return null;
   }
@@ -36,7 +55,7 @@ export function connectionsList(project: Project): Connection[] {
 
 export function totalArea(project: Project, ids?: string[]): number {
   const list = ids ? ids.map((id) => project.nodes[id]).filter(Boolean) : Object.values(project.nodes);
-  return list.reduce((sum, n) => sum + shapeArea(n.shape), 0);
+  return list.reduce((sum, n) => sum + nodeArea(n, project), 0);
 }
 
 export function findConnection(project: Project, a: string, b: string): Connection | undefined {

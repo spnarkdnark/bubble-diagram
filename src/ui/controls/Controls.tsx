@@ -1,10 +1,29 @@
 import { useEffect, useRef, useState, type ReactNode } from 'react';
 import { isHexColor } from '../../model/color';
 
-export function Field({ label, children, hint }: { label: string; children: ReactNode; hint?: string }) {
+export interface OverrideMark {
+  /** true = overridden on all, null = on some */
+  on: boolean | null;
+  reset: () => void;
+}
+
+export function Field({ label, children, hint, override }: { label: string; children: ReactNode; hint?: string; override?: OverrideMark }) {
   return (
     <label className="field" title={hint}>
-      <span className="field-label">{label}</span>
+      <span className="field-label">
+        {label}
+        {override && override.on !== false && (
+          <button
+            type="button"
+            className={`override-dot ${override.on === null ? 'partial' : ''}`}
+            title="Overrides the category style. Click to reset."
+            onClick={(e) => {
+              e.preventDefault();
+              override.reset();
+            }}
+          />
+        )}
+      </span>
       <span className="field-control">{children}</span>
     </label>
   );
@@ -142,11 +161,11 @@ export function Checkbox({ checked, onChange, label }: { checked: boolean | null
   );
 }
 
-export function Slider({ value, onChange, min, max, step }: { value: number | null; onChange: (v: number) => void; min: number; max: number; step: number }) {
+export function Slider({ value, onChange, min, max, step, format }: { value: number | null; onChange: (v: number) => void; min: number; max: number; step: number; format?: (v: number) => string }) {
   return (
     <span className="slider">
       <input type="range" min={min} max={max} step={step} value={value ?? (min + max) / 2} onChange={(e) => onChange(parseFloat(e.target.value))} />
-      <span className="slider-value">{value === null ? MIXED : `${Math.round(value * 100)}%`}</span>
+      <span className="slider-value">{value === null ? MIXED : format ? format(value) : `${Math.round(value * 100)}%`}</span>
     </span>
   );
 }
