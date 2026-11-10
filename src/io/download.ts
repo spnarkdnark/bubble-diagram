@@ -21,5 +21,8 @@ export function pickFile(accept: string): Promise<File | null> {
 }
 
 export function safeFilename(name: string): string {
-  return (name.trim() || 'diagram').replace(/[^\w\- ]+/g, '').replace(/\s+/g, '-').toLowerCase();
+  return (name.trim() || 'diagram')
+    .replace(/[^\w\- ]+/g, '')
+    .replace(/\s+/g, '-')
+    .toLowerCase();
 }

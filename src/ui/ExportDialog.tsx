@@ -49,7 +49,10 @@ function ExportDialogBody() {
       alive = false;
     };
   }, [labelFont]);
-  const svg = useMemo(() => (fontReady ? buildSvg(doc, opts) : null), [doc, includeGrid, includeScaleBar, onlySelection, selection, fontReady]);
+  const svg = useMemo(
+    () => (fontReady ? buildSvg(doc, opts) : null),
+    [doc, includeGrid, includeScaleBar, onlySelection, selection, fontReady],
+  );
   const layout = svg && format === 'pdf' ? pageLayout(svg, sheet, orientation) : null;
   const effDpi = svg && format === 'png' ? clampDpi(svg, parseInt(dpi)) : 0;
 
@@ -83,12 +86,22 @@ function ExportDialogBody() {
         </div>
         <Checkbox label="Include scale bar & title" checked={includeScaleBar} onChange={setIncludeScaleBar} />
         <Checkbox label="Include grid" checked={includeGrid} onChange={setIncludeGrid} />
-        {selection.length > 0 && <Checkbox label={`Only selected bubbles (${selection.length})`} checked={onlySelection} onChange={setOnlySelection} />}
+        {selection.length > 0 && (
+          <Checkbox
+            label={`Only selected bubbles (${selection.length})`}
+            checked={onlySelection}
+            onChange={setOnlySelection}
+          />
+        )}
 
         {format === 'pdf' && (
           <>
             <Field label="Sheet">
-              <SelectField<SheetId> value={sheet} options={SHEETS.map((s) => ({ value: s.id, label: s.label }))} onChange={setSheet} />
+              <SelectField<SheetId>
+                value={sheet}
+                options={SHEETS.map((s) => ({ value: s.id, label: s.label }))}
+                onChange={setSheet}
+              />
             </Field>
             {sheet !== 'fit' && (
               <Field label="Orientation">
@@ -123,10 +136,17 @@ function ExportDialogBody() {
         {svg && (
           <div className="info">
             Drawing at true scale: {fmtIn(svg.widthPt)} × {fmtIn(svg.heightPt)}
-            {layout && sheet !== 'fit' && <> on a {fmtIn(layout.pageWPt)} × {fmtIn(layout.pageHPt)} sheet</>}
+            {layout && sheet !== 'fit' && (
+              <>
+                {' '}
+                on a {fmtIn(layout.pageWPt)} × {fmtIn(layout.pageHPt)} sheet
+              </>
+            )}
             {format === 'png' && (
               <>
-                {' '}→ {Math.round((svg.widthPt / PT_PER_IN) * effDpi)} × {Math.round((svg.heightPt / PT_PER_IN) * effDpi)} px
+                {' '}
+                → {Math.round((svg.widthPt / PT_PER_IN) * effDpi)} × {Math.round((svg.heightPt / PT_PER_IN) * effDpi)}{' '}
+                px
                 {effDpi < parseInt(dpi) && ` (limited to ${effDpi} dpi)`}
               </>
             )}
@@ -134,13 +154,15 @@ function ExportDialogBody() {
         )}
         {layout && !layout.fits && (
           <div className="warning">
-            The drawing doesn't fit this sheet at the current scale and will be clipped. Choose a larger sheet, a smaller
-            scale, or “Fit to drawing”.
+            The drawing doesn't fit this sheet at the current scale and will be clipped. Choose a larger sheet, a
+            smaller scale, or “Fit to drawing”.
           </div>
         )}
 
         <div className="dialog-actions">
-          <button className="btn" onClick={close}>Cancel</button>
+          <button className="btn" onClick={close}>
+            Cancel
+          </button>
           <button className="btn primary" disabled={!svg || busy} onClick={run}>
             {busy ? 'Exporting…' : `Export ${format.toUpperCase()}`}
           </button>

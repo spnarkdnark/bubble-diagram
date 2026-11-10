@@ -18,7 +18,9 @@ function isTyping(): boolean {
   const t = document.activeElement as HTMLElement | null;
   if (!t) return false;
   if (t.tagName === 'TEXTAREA' || t.isContentEditable) return true;
-  return t.tagName === 'INPUT' && !['checkbox', 'radio', 'range', 'color', 'button'].includes((t as HTMLInputElement).type);
+  return (
+    t.tagName === 'INPUT' && !['checkbox', 'radio', 'range', 'color', 'button'].includes((t as HTMLInputElement).type)
+  );
 }
 
 function copyText(): string | null {
@@ -67,7 +69,10 @@ function pasteClip(clip: ClipPayload, text: string) {
   const at =
     pointer.inside && pointer.world
       ? pointer.world
-      : { x: clip.center.x + DUPLICATE_OFFSET_FT * lastClip.pastes, y: clip.center.y + DUPLICATE_OFFSET_FT * lastClip.pastes };
+      : {
+          x: clip.center.x + DUPLICATE_OFFSET_FT * lastClip.pastes,
+          y: clip.center.y + DUPLICATE_OFFSET_FT * lastClip.pastes,
+        };
   const plan = planPaste(doc, clip, at);
   useDocument.getState().commit((d) => {
     for (const c of plan.categories) {
@@ -90,7 +95,11 @@ function pasteTable(text: string): boolean {
   const { rows } = parseCsv(text);
   if (rows.length === 0) return false;
   const doc = getDoc();
-  const { nodes, categories } = buildImport(doc, rows, pointer.inside && pointer.world ? pointer.world : viewCenterWorld());
+  const { nodes, categories } = buildImport(
+    doc,
+    rows,
+    pointer.inside && pointer.world ? pointer.world : viewCenterWorld(),
+  );
   useDocument.getState().commit((d) => {
     for (const c of categories) {
       d.categories[c.id] = c;

@@ -42,7 +42,11 @@ export function CategoryPanel() {
           return (
             <li key={id}>
               <div className="cat-row">
-                <button className={`chev ${open === id ? 'open' : ''}`} title="Edit category style" onClick={() => toggle(id)}>
+                <button
+                  className={`chev ${open === id ? 'open' : ''}`}
+                  title="Edit category style"
+                  onClick={() => toggle(id)}
+                >
                   {open === id ? '▾' : '▸'}
                 </button>
                 <input
@@ -79,7 +83,11 @@ export function CategoryPanel() {
         })}
         <li>
           <div className="cat-row">
-            <button className={`chev ${open === '__default' ? 'open' : ''}`} title="Edit style for bubbles without a category" onClick={() => toggle('__default')}>
+            <button
+              className={`chev ${open === '__default' ? 'open' : ''}`}
+              title="Edit style for bubbles without a category"
+              onClick={() => toggle('__default')}
+            >
               {open === '__default' ? '▾' : '▸'}
             </button>
             <input

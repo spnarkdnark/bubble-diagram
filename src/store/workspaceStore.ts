@@ -165,7 +165,11 @@ export function restoreWorkspace(tabs: { project: Project; view?: View }[], acti
   const parked: Record<Id, TabState> = {};
   tabs.forEach((t, i) => {
     if (i !== a)
-      parked[ids[i]] = { history: H.initHistory(t.project), view: t.view ?? { zoom: 1, panX: 0, panY: 0 }, selection: EMPTY_SELECTION };
+      parked[ids[i]] = {
+        history: H.initHistory(t.project),
+        view: t.view ?? { zoom: 1, panX: 0, panY: 0 },
+        selection: EMPTY_SELECTION,
+      };
   });
   useWorkspace.setState({ order: ids, activeId: ids[a], parked, lastClosed: null });
   useDocument.setState({ history: H.initHistory(tabs[a].project), gestureBase: null });

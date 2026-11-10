@@ -260,7 +260,8 @@ function rdp(pts: Point[], eps: number): Point[] {
 }
 
 /** Absolute-coordinate version of BlobPoint used while building. */
-export type BuildPoint = { t: 'free'; x: number; y: number } | { t: 'anchor'; node: Id; angle: number; dir: 1 | -1; arc: boolean };
+export type BuildPoint =
+  { t: 'free'; x: number; y: number } | { t: 'anchor'; node: Id; angle: number; dir: 1 | -1; arc: boolean };
 
 /**
  * Turn a closed sequence of (possibly snapped) samples into control points.
@@ -285,7 +286,10 @@ export function pointsFromSamples(samples: { p: Point; snap: SnapInfo | null }[]
   const out: BuildPoint[] = [];
   for (const run of runs) {
     if (run.id === null) {
-      const simple = rdp(run.items.map((s) => s.p), simplifyEps);
+      const simple = rdp(
+        run.items.map((s) => s.p),
+        simplifyEps,
+      );
       for (const p of simple) out.push({ t: 'free', x: p.x, y: p.y });
       continue;
     }
@@ -296,7 +300,8 @@ export function pointsFromSamples(samples: { p: Point; snap: SnapInfo | null }[]
     const dir: 1 | -1 = sweep >= 0 ? 1 : -1;
     if (Math.abs(sweep) >= TAU - 0.35) {
       // went all the way around: a full ring
-      for (let k = 0; k < 3; k++) out.push({ t: 'anchor', node: run.id, angle: a0 + (dir * k * TAU) / 3, dir, arc: true });
+      for (let k = 0; k < 3; k++)
+        out.push({ t: 'anchor', node: run.id, angle: a0 + (dir * k * TAU) / 3, dir, arc: true });
     } else if (Math.abs(sweep) < 0.06) {
       const mid = a0 + sweep / 2;
       out.push({ t: 'anchor', node: run.id, angle: mid, dir, arc: false });
@@ -320,7 +325,13 @@ function dedupe(pts: BuildPoint[], eps: number): BuildPoint[] {
 }
 
 /** Freehand stroke (world feet) → control points. */
-export function blobFromStroke(stroke: Point[], rings: RingRef[], gap: number, tol: number, simplifyEps: number): BuildPoint[] {
+export function blobFromStroke(
+  stroke: Point[],
+  rings: RingRef[],
+  gap: number,
+  tol: number,
+  simplifyEps: number,
+): BuildPoint[] {
   return pointsFromSamples(
     stroke.map((p) => ({ p, snap: snapToRing(p, rings, gap, tol) })),
     simplifyEps,
@@ -406,7 +417,9 @@ export function toBlobShape(pts: BuildPoint[], gapFt: number, rings: RingRef[]):
     x: abs.reduce((s, p) => s + p.x, 0) / Math.max(1, abs.length),
     y: abs.reduce((s, p) => s + p.y, 0) / Math.max(1, abs.length),
   };
-  const points: BlobPoint[] = pts.map((b) => (b.t === 'free' ? { t: 'free', x: b.x - origin.x, y: b.y - origin.y } : { ...b }));
+  const points: BlobPoint[] = pts.map((b) =>
+    b.t === 'free' ? { t: 'free', x: b.x - origin.x, y: b.y - origin.y } : { ...b },
+  );
   return { shape: { kind: 'blob', points, gapFt }, origin };
 }
 
@@ -452,7 +465,13 @@ export function movePoint(node: BubbleNode, index: number, p: Point, snap: SnapI
   const old = points[index];
   if (snap) {
     const same = old.t === 'anchor' && old.node === snap.ring.id;
-    points[index] = { t: 'anchor', node: snap.ring.id, angle: snap.angle, dir: same ? (old as any).dir : 1, arc: same ? (old as any).arc : false };
+    points[index] = {
+      t: 'anchor',
+      node: snap.ring.id,
+      angle: snap.angle,
+      dir: same ? (old as any).dir : 1,
+      arc: same ? (old as any).arc : false,
+    };
   } else points[index] = { t: 'free', x: p.x - node.x, y: p.y - node.y };
   // keep arcs valid on both sides of the moved point
   const n = points.length;

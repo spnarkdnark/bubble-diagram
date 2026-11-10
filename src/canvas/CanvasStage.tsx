@@ -16,7 +16,15 @@ import { handlePosition, hitTest, topNodeAt } from './hitTest';
 import { pointer } from './pointer';
 import { loadWebFont } from '../render/fonts';
 import { PAPER_COLORS, paperTileUrl } from '../render/paper';
-import { blobFromClicks, blobFromStroke, blobGeometry, circleRings, movePoint, snapToRing, toBlobShape } from '../model/blob';
+import {
+  blobFromClicks,
+  blobFromStroke,
+  blobGeometry,
+  circleRings,
+  movePoint,
+  snapToRing,
+  toBlobShape,
+} from '../model/blob';
 import type { BubbleNode } from '../model/types';
 
 const ACCENT = '#2f7de1';
@@ -27,7 +35,16 @@ const WHEEL_STEP_THRESHOLD = 40;
 type Interaction =
   | { kind: 'none' }
   | { kind: 'pan'; sx: number; sy: number; panX: number; panY: number }
-  | { kind: 'move'; sx: number; sy: number; start: Point; origins: Map<Id, Point>; moved: boolean; clicked: Id; wasSelected: boolean }
+  | {
+      kind: 'move';
+      sx: number;
+      sy: number;
+      start: Point;
+      origins: Map<Id, Point>;
+      moved: boolean;
+      clicked: Id;
+      wasSelected: boolean;
+    }
   | { kind: 'resize'; id: Id }
   | { kind: 'marquee'; start: Point; additive: boolean }
   | { kind: 'connect'; from: Id }
@@ -62,7 +79,11 @@ function draftOutline(draft: Point[], cursor: Point | null): Point[] {
   const doc = getDoc();
   const k = currentK();
   const rings = circleRings(doc);
-  const { shape, origin } = toBlobShape(blobFromClicks(pts, rings, doc.settings.shapeGapFt, A.SNAP_PX / k), doc.settings.shapeGapFt, rings);
+  const { shape, origin } = toBlobShape(
+    blobFromClicks(pts, rings, doc.settings.shapeGapFt, A.SNAP_PX / k),
+    doc.settings.shapeGapFt,
+    rings,
+  );
   const temp = { id: '__draft', name: '', x: origin.x, y: origin.y, shape, categoryId: null, style: {} } as BubbleNode;
   return blobGeometry(temp, doc).poly;
 }
@@ -100,8 +121,13 @@ export function CanvasStage() {
   const scene = useMemo(() => buildScene(doc), [doc, fontEpoch]);
   sceneRef.current = scene;
   const handleFor =
-    tool === 'select' && selection.nodes.length === 1 && doc.nodes[selection.nodes[0]]?.shape.kind === 'circle' ? selection.nodes[0] : null;
-  const blobTarget = tool === 'select' && selection.nodes.length === 1 && doc.nodes[selection.nodes[0]]?.shape.kind === 'blob' ? selection.nodes[0] : null;
+    tool === 'select' && selection.nodes.length === 1 && doc.nodes[selection.nodes[0]]?.shape.kind === 'circle'
+      ? selection.nodes[0]
+      : null;
+  const blobTarget =
+    tool === 'select' && selection.nodes.length === 1 && doc.nodes[selection.nodes[0]]?.shape.kind === 'blob'
+      ? selection.nodes[0]
+      : null;
 
   // ---- hand fonts: re-measure labels once the web font is ready ----
   const labelFont = doc.settings.graphic.labelFont;
@@ -159,7 +185,8 @@ export function CanvasStage() {
     const pad = 3 / currentK();
     for (let i = sc.nodes.length - 1; i >= 0; i--) {
       const r = labelNameRect(sc.nodes[i].label, sc.ftPerPt);
-      if (r && p.x >= r.minX - pad && p.x <= r.maxX + pad && p.y >= r.minY - pad && p.y <= r.maxY + pad) return sc.nodes[i].id;
+      if (r && p.x >= r.minX - pad && p.x <= r.maxX + pad && p.y >= r.minY - pad && p.y <= r.maxY + pad)
+        return sc.nodes[i].id;
     }
     return null;
   };
@@ -170,12 +197,16 @@ export function CanvasStage() {
     if (!id) return null;
     const ctrl = blobGeometry(getDoc().nodes[id], getDoc()).ctrl;
     const tol = (HIT_TOL_PX * 1.2) / currentK();
-    for (let i = 0; i < ctrl.length; i++) if (Math.hypot(p.x - ctrl[i].x, p.y - ctrl[i].y) <= tol) return { id, index: i };
+    for (let i = 0; i < ctrl.length; i++)
+      if (Math.hypot(p.x - ctrl[i].x, p.y - ctrl[i].y) <= tol) return { id, index: i };
     return null;
   };
   const snapAt = (p: Point, exclude?: Id) => {
     const doc = getDoc();
-    const gap = exclude && doc.nodes[exclude]?.shape.kind === 'blob' ? (doc.nodes[exclude].shape as any).gapFt : doc.settings.shapeGapFt;
+    const gap =
+      exclude && doc.nodes[exclude]?.shape.kind === 'blob'
+        ? (doc.nodes[exclude].shape as any).gapFt
+        : doc.settings.shapeGapFt;
     return { snap: snapToRing(p, circleRings(doc), gap, A.SNAP_PX / currentK()), gap };
   };
   const hintFor = (snap: ReturnType<typeof snapToRing>, gap: number): SnapHint =>
@@ -184,7 +215,10 @@ export function CanvasStage() {
           x: snap.ring.x,
           y: snap.ring.y,
           R: snap.ring.r + gap,
-          at: { x: snap.ring.x + Math.cos(snap.angle) * (snap.ring.r + gap), y: snap.ring.y + Math.sin(snap.angle) * (snap.ring.r + gap) },
+          at: {
+            x: snap.ring.x + Math.cos(snap.angle) * (snap.ring.r + gap),
+            y: snap.ring.y + Math.sin(snap.angle) * (snap.ring.r + gap),
+          },
         }
       : null;
 
@@ -203,7 +237,15 @@ export function CanvasStage() {
     const hit = hitAt(p);
 
     if (ui.tool === 'shape') {
-      interaction.current = { kind: 'draw', pts: [p], sx: e.clientX, sy: e.clientY, lx: e.clientX, ly: e.clientY, len: 0 };
+      interaction.current = {
+        kind: 'draw',
+        pts: [p],
+        sx: e.clientX,
+        sy: e.clientY,
+        lx: e.clientX,
+        ly: e.clientY,
+        len: 0,
+      };
       return;
     }
 
@@ -281,7 +323,8 @@ export function CanvasStage() {
       const p = toWorld(e.clientX, e.clientY);
       const rect = containerRef.current!.getBoundingClientRect();
       pointer.world = p;
-      pointer.inside = e.clientX >= rect.left && e.clientX <= rect.right && e.clientY >= rect.top && e.clientY <= rect.bottom;
+      pointer.inside =
+        e.clientX >= rect.left && e.clientX <= rect.right && e.clientY >= rect.top && e.clientY <= rect.bottom;
       switch (it.kind) {
         case 'pan':
           ui.setView({ panX: it.panX + e.clientX - it.sx, panY: it.panY + e.clientY - it.sy });
@@ -379,7 +422,11 @@ export function CanvasStage() {
           if (it.moved) useDocument.getState().endGesture();
           else if (!e.shiftKey && ui.selection.nodes.length > 1) A.selectNodes([it.clicked]);
           // click on the name of the already-selected bubble: edit it in place
-          else if (it.wasSelected && ui.selection.nodes.length === 1 && labelAt(toWorld(e.clientX, e.clientY)) === it.clicked)
+          else if (
+            it.wasSelected &&
+            ui.selection.nodes.length === 1 &&
+            labelAt(toWorld(e.clientX, e.clientY)) === it.clicked
+          )
             ui.setEditingLabel(it.clicked);
           break;
         case 'resize':
@@ -398,7 +445,8 @@ export function CanvasStage() {
             // a click: add a point to the draft, or close it on the first point
             const draft = ui.shapeDraft ?? [];
             const first = draft[0];
-            if (first && draft.length >= 3 && Math.hypot(first.x - it.pts[0].x, first.y - it.pts[0].y) * kk < 10) A.finishShapeDraft();
+            if (first && draft.length >= 3 && Math.hypot(first.x - it.pts[0].x, first.y - it.pts[0].y) * kk < 10)
+              A.finishShapeDraft();
             else ui.setShapeDraft([...draft, it.pts[0]]);
             break;
           }
@@ -504,12 +552,21 @@ export function CanvasStage() {
     if (e.clientX < r.left || e.clientX > r.right || e.clientY < r.top || e.clientY > r.bottom) return;
     const wp = toWorld(e.clientX, e.clientY);
     if (blobPointAt(wp)) return void (el.style.cursor = 'grab');
-    if (ui.tool === 'select' && ui.selection.nodes.length === 1 && labelAt(wp) === ui.selection.nodes[0]) return void (el.style.cursor = 'text');
+    if (ui.tool === 'select' && ui.selection.nodes.length === 1 && labelAt(wp) === ui.selection.nodes[0])
+      return void (el.style.cursor = 'text');
     const hit = hitAt(wp);
     el.style.cursor =
       ui.tool === 'connect'
-        ? hit.kind === 'node' ? 'crosshair' : 'default'
-        : hit.kind === 'handle' ? 'ew-resize' : hit.kind === 'node' ? 'move' : hit.kind === 'connection' || hit.kind === 'overlap' ? 'pointer' : 'default';
+        ? hit.kind === 'node'
+          ? 'crosshair'
+          : 'default'
+        : hit.kind === 'handle'
+          ? 'ew-resize'
+          : hit.kind === 'node'
+            ? 'move'
+            : hit.kind === 'connection' || hit.kind === 'overlap'
+              ? 'pointer'
+              : 'default';
   };
   useEffect(() => {
     const el = containerRef.current;
@@ -534,7 +591,12 @@ export function CanvasStage() {
       const ui = useUi.getState();
       const doc = getDoc();
       const over = topNodeAt(doc, toWorld(e.clientX, e.clientY));
-      if (over && ui.tool === 'select' && ui.selection.nodes.includes(over) && doc.nodes[over].shape.kind === 'circle') {
+      if (
+        over &&
+        ui.tool === 'select' &&
+        ui.selection.nodes.includes(over) &&
+        doc.nodes[over].shape.kind === 'circle'
+      ) {
         // discrete mouse wheels step once per notch; trackpads accumulate
         let dir: 1 | -1 | 0 = 0;
         if (Math.abs(delta) >= WHEEL_STEP_THRESHOLD) {
@@ -549,7 +611,11 @@ export function CanvasStage() {
         }
         if (!dir) return;
         const inc = e.shiftKey ? 1 / 12 : doc.settings.snap.radiusIncrementFt;
-        A.stepRadius(ui.selection.nodes.filter((id) => doc.nodes[id]?.shape.kind === 'circle'), dir, inc);
+        A.stepRadius(
+          ui.selection.nodes.filter((id) => doc.nodes[id]?.shape.kind === 'circle'),
+          dir,
+          inc,
+        );
         const n = getDoc().nodes[over];
         const r = shapeSize(n.shape);
         ui.setReadout({ text: `R ${formatFeetInches(r)}`, at: { x: n.x + r, y: n.y } });
@@ -581,7 +647,15 @@ export function CanvasStage() {
         pointer.inside = false;
       }}
     >
-      <Stage width={size.width} height={size.height} x={view.panX} y={view.panY} scaleX={k} scaleY={k} listening={false}>
+      <Stage
+        width={size.width}
+        height={size.height}
+        x={view.panX}
+        y={view.panY}
+        scaleX={k}
+        scaleY={k}
+        listening={false}
+      >
         {doc.settings.grid.visible && (
           <GridLayer
             spacingFt={doc.settings.grid.spacingFt}
@@ -603,7 +677,12 @@ export function CanvasStage() {
                 drawPrims(ctx, n.outline);
               }
               drawPrims(ctx, scene.overlays);
-              drawLabels(ctx, scene.nodes.flatMap((n) => (n.label && n.id !== editingLabel ? [n.label] : [])), k, scene.ftPerPt);
+              drawLabels(
+                ctx,
+                scene.nodes.flatMap((n) => (n.label && n.id !== editingLabel ? [n.label] : [])),
+                k,
+                scene.ftPerPt,
+              );
             }}
           />
         </Layer>
@@ -611,9 +690,19 @@ export function CanvasStage() {
           {Object.values(doc.connections)
             .filter((c) => selectedConns.has(c.id))
             .map((c) => {
-              const seg = doc.nodes[c.from] && doc.nodes[c.to] ? connectionSegment(doc.nodes[c.from], doc.nodes[c.to], doc) : null;
+              const seg =
+                doc.nodes[c.from] && doc.nodes[c.to]
+                  ? connectionSegment(doc.nodes[c.from], doc.nodes[c.to], doc)
+                  : null;
               return seg ? (
-                <Line key={c.id} points={[seg[0].x, seg[0].y, seg[1].x, seg[1].y]} stroke={ACCENT} opacity={0.45} strokeWidth={6 / k} lineCap="round" />
+                <Line
+                  key={c.id}
+                  points={[seg[0].x, seg[0].y, seg[1].x, seg[1].y]}
+                  stroke={ACCENT}
+                  opacity={0.45}
+                  strokeWidth={6 / k}
+                  lineCap="round"
+                />
               ) : null;
             })}
           {scene.overlaps
@@ -636,7 +725,14 @@ export function CanvasStage() {
           {nodes
             .filter((n) => n.shape.kind === 'blob' && (selectedNodes.has(n.id) || n.id === connectFrom))
             .map((n) => (
-              <Line key={n.id} points={flat(blobGeometry(n, doc).poly)} closed stroke={ACCENT} strokeWidth={1.5 / k} dash={n.id === connectFrom ? [4 / k, 3 / k] : undefined} />
+              <Line
+                key={n.id}
+                points={flat(blobGeometry(n, doc).poly)}
+                closed
+                stroke={ACCENT}
+                strokeWidth={1.5 / k}
+                dash={n.id === connectFrom ? [4 / k, 3 / k] : undefined}
+              />
             ))}
           {nodes
             .filter((n) => n.shape.kind === 'circle' && (selectedNodes.has(n.id) || n.id === connectFrom))
@@ -662,10 +758,19 @@ export function CanvasStage() {
               strokeWidth={1.5 / k}
             />
           )}
-          {fromNode && pointerWorld && (() => {
-            const p = boundaryPoint(fromNode, pointerWorld, doc);
-            return <Line points={[p.x, p.y, pointerWorld.x, pointerWorld.y]} stroke={ACCENT} strokeWidth={1.5 / k} dash={[6 / k, 4 / k]} />;
-          })()}
+          {fromNode &&
+            pointerWorld &&
+            (() => {
+              const p = boundaryPoint(fromNode, pointerWorld, doc);
+              return (
+                <Line
+                  points={[p.x, p.y, pointerWorld.x, pointerWorld.y]}
+                  stroke={ACCENT}
+                  strokeWidth={1.5 / k}
+                  dash={[6 / k, 4 / k]}
+                />
+              );
+            })()}
           {blobTarget &&
             blobGeometry(doc.nodes[blobTarget], doc).ctrl.map((c, i) => {
               const pt = (doc.nodes[blobTarget].shape as any).points[i];
@@ -683,16 +788,47 @@ export function CanvasStage() {
             })}
           {snapHint && (
             <>
-              <Circle x={snapHint.x} y={snapHint.y} radius={snapHint.R} stroke={ACCENT} strokeWidth={1 / k} dash={[5 / k, 4 / k]} opacity={0.8} />
+              <Circle
+                x={snapHint.x}
+                y={snapHint.y}
+                radius={snapHint.R}
+                stroke={ACCENT}
+                strokeWidth={1 / k}
+                dash={[5 / k, 4 / k]}
+                opacity={0.8}
+              />
               <Circle x={snapHint.at.x} y={snapHint.at.y} radius={3.5 / k} fill={ACCENT} />
             </>
           )}
-          {drawPreview && <Line points={flat(drawPreview)} stroke="#3a3a3a" strokeWidth={1.4 / k} lineCap="round" lineJoin="round" opacity={0.85} />}
+          {drawPreview && (
+            <Line
+              points={flat(drawPreview)}
+              stroke="#3a3a3a"
+              strokeWidth={1.4 / k}
+              lineCap="round"
+              lineJoin="round"
+              opacity={0.85}
+            />
+          )}
           {shapeDraft && shapeDraft.length > 0 && (
             <>
-              <Line points={flat(draftOutline(shapeDraft, pointerWorld))} closed stroke={ACCENT} strokeWidth={1.5 / k} fill="rgba(47,125,225,0.06)" />
+              <Line
+                points={flat(draftOutline(shapeDraft, pointerWorld))}
+                closed
+                stroke={ACCENT}
+                strokeWidth={1.5 / k}
+                fill="rgba(47,125,225,0.06)"
+              />
               {shapeDraft.map((q, i) => (
-                <Circle key={i} x={q.x} y={q.y} radius={(i === 0 ? 5 : 3.5) / k} fill={i === 0 ? '#fff' : ACCENT} stroke={ACCENT} strokeWidth={1.5 / k} />
+                <Circle
+                  key={i}
+                  x={q.x}
+                  y={q.y}
+                  radius={(i === 0 ? 5 : 3.5) / k}
+                  fill={i === 0 ? '#fff' : ACCENT}
+                  stroke={ACCENT}
+                  strokeWidth={1.5 / k}
+                />
               ))}
             </>
           )}
@@ -715,28 +851,30 @@ export function CanvasStage() {
           )}
         </Layer>
       </Stage>
-      {editingLabel && doc.nodes[editingLabel] && (() => {
-        const ns = scene.nodes.find((n) => n.id === editingLabel);
-        const label = ns?.label;
-        if (!label) return null;
-        const close = () => useUi.getState().setEditingLabel(null);
-        return (
-          <LabelEditor
-            key={editingLabel}
-            name={doc.nodes[editingLabel].name}
-            label={label}
-            k={k}
-            panX={view.panX}
-            panY={view.panY}
-            ftPerPt={scene.ftPerPt}
-            onCommit={(t) => {
-              A.renameNode(editingLabel, t);
-              close();
-            }}
-            onCancel={close}
-          />
-        );
-      })()}
+      {editingLabel &&
+        doc.nodes[editingLabel] &&
+        (() => {
+          const ns = scene.nodes.find((n) => n.id === editingLabel);
+          const label = ns?.label;
+          if (!label) return null;
+          const close = () => useUi.getState().setEditingLabel(null);
+          return (
+            <LabelEditor
+              key={editingLabel}
+              name={doc.nodes[editingLabel].name}
+              label={label}
+              k={k}
+              panX={view.panX}
+              panY={view.panY}
+              ftPerPt={scene.ftPerPt}
+              onCommit={(t) => {
+                A.renameNode(editingLabel, t);
+                close();
+              }}
+              onCancel={close}
+            />
+          );
+        })()}
       {tool === 'shape' && (
         <div className="canvas-tip">
           {shapeDraft?.length

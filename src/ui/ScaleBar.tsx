@@ -13,14 +13,30 @@ export function ScaleBar() {
     <div className="scalebar" aria-label="Scale bar">
       <svg width={w + 24} height={30}>
         {Array.from({ length: segs }, (_, i) => (
-          <rect key={i} x={8 + (i * w) / segs} y={6} width={w / segs} height={5} fill={i % 2 ? '#fff' : '#333'} stroke="#333" strokeWidth={0.75} />
+          <rect
+            key={i}
+            x={8 + (i * w) / segs}
+            y={6}
+            width={w / segs}
+            height={5}
+            fill={i % 2 ? '#fff' : '#333'}
+            stroke="#333"
+            strokeWidth={0.75}
+          />
         ))}
-        <text x={8} y={24} fontSize={10} textAnchor="middle">0</text>
-        <text x={8 + w / 2} y={24} fontSize={10} textAnchor="middle">{len / 2}'</text>
-        <text x={8 + w} y={24} fontSize={10} textAnchor="middle">{len}'</text>
+        <text x={8} y={24} fontSize={10} textAnchor="middle">
+          0
+        </text>
+        <text x={8 + w / 2} y={24} fontSize={10} textAnchor="middle">
+          {len / 2}'
+        </text>
+        <text x={8 + w} y={24} fontSize={10} textAnchor="middle">
+          {len}'
+        </text>
       </svg>
       <div className="scalebar-label">
-        {getScale(doc.settings.scale).label} · {Math.round(zoom * 100)}%{Math.abs(zoom - 1) < 1e-6 ? ' (true size)' : ''}
+        {getScale(doc.settings.scale).label} · {Math.round(zoom * 100)}%
+        {Math.abs(zoom - 1) < 1e-6 ? ' (true size)' : ''}
       </div>
     </div>
   );

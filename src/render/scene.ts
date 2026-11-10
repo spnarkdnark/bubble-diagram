@@ -13,7 +13,14 @@ import { blobGeometry } from '../model/blob';
 import { CONNECTION_COLOR, CONNECTION_STYLES, dashPatternPt, LABEL_FONT_FAMILY } from '../model/defaults';
 import { darken, hexToRgb, rgbToHex } from '../model/color';
 import { ptToFt } from '../model/units';
-import { findOverlaps, hiddenInterval, mergeClusters, visibleArcs, type Interval, type Overlap } from '../model/overlaps';
+import {
+  findOverlaps,
+  hiddenInterval,
+  mergeClusters,
+  visibleArcs,
+  type Interval,
+  type Overlap,
+} from '../model/overlaps';
 import { layoutLabel, measureEpoch, type LabelLayout } from '../canvas/textLayout';
 import {
   hatchRegion,
@@ -150,11 +157,27 @@ function circleSamples(r: number, ftPerPt: number): number {
 // cache sketched geometry per node so unchanged bubbles are not recomputed while dragging others
 const nodeCache = new Map<Id, { key: string; scene: NodeScene }>();
 
-function nodeScene(node: BubbleNode, project: Project, style: ResolvedStyle, base: SketchParams, suppressOutline: boolean): NodeScene {
+function nodeScene(
+  node: BubbleNode,
+  project: Project,
+  style: ResolvedStyle,
+  base: SketchParams,
+  suppressOutline: boolean,
+): NodeScene {
   const ftPerPt = ptToFt(1, project.settings.scale);
   const g = project.settings.graphic;
   const blob = node.shape.kind === 'blob' ? blobGeometry(node, project) : null;
-  const key = JSON.stringify([node, style, base, suppressOutline, ftPerPt, g.labelFont, g.seed, measureEpoch(), blob?.ctrl]);
+  const key = JSON.stringify([
+    node,
+    style,
+    base,
+    suppressOutline,
+    ftPerPt,
+    g.labelFont,
+    g.seed,
+    measureEpoch(),
+    blob?.ctrl,
+  ]);
   const hit = nodeCache.get(node.id);
   if (hit && hit.key === key) return hit.scene;
 
@@ -195,7 +218,9 @@ function nodeScene(node: BubbleNode, project: Project, style: ResolvedStyle, bas
     fill = opsToPrims(sketchFill(ring, opts), colors, style.fillOpacity);
     outline = stroke
       ? opsToPrims(sketchClosedStroke(ring, { width: stroke.width, dash: stroke.dash }, opts), colors, 1).map((p) =>
-          p.t === 'path' && p.stroke ? { ...p, stroke: { ...p.stroke, cap: stroke.cap === 'round' ? 'round' : p.stroke.cap } } : p,
+          p.t === 'path' && p.stroke
+            ? { ...p, stroke: { ...p.stroke, cap: stroke.cap === 'round' ? 'round' : p.stroke.cap } }
+            : p,
         )
       : [];
   }
@@ -225,14 +250,22 @@ function arcPrims(
 ): Prim[] {
   if (isClean(params)) return [{ t: 'arc', cx, cy, r, a0, a1, stroke }];
   const pts = sampleArc(cx, cy, r, a0, a1, Math.min(0.05, (3 * ftPerPt) / r));
-  return opsToPrims(sketchOpenStroke(pts, { width: stroke.width, dash: stroke.dash }, { params, seed, unitsPerPt: ftPerPt }), {
-    fill: stroke.color,
-    fillDark: stroke.color,
-    stroke: stroke.color,
-  }, 1);
+  return opsToPrims(
+    sketchOpenStroke(pts, { width: stroke.width, dash: stroke.dash }, { params, seed, unitsPerPt: ftPerPt }),
+    {
+      fill: stroke.color,
+      fillDark: stroke.color,
+      stroke: stroke.color,
+    },
+    1,
+  );
 }
 
-function lensPolygon(A: { x: number; y: number; r: number }, B: { x: number; y: number; r: number }, ftPerPt: number): Pt[] {
+function lensPolygon(
+  A: { x: number; y: number; r: number },
+  B: { x: number; y: number; r: number },
+  ftPerPt: number,
+): Pt[] {
   const ha = hiddenInterval(A, B);
   const hb = hiddenInterval(B, A);
   if (ha === 'all') return sampleCircle(A.x, A.y, A.r, circleSamples(A.r, ftPerPt));
@@ -300,10 +333,16 @@ export function buildScene(project: Project): Scene {
         else if (h) hidden.push(h);
       }
       const vis = all ? [] : visibleArcs(hidden);
-      vis.forEach((arc, i) => overlays.push(...arcPrims(A.x, A.y, A.r, arc, thick, params, sd(`${id}:m${i}`), ftPerPt)));
+      vis.forEach((arc, i) =>
+        overlays.push(...arcPrims(A.x, A.y, A.r, arc, thick, params, sd(`${id}:m${i}`), ftPerPt)),
+      );
       if (inner) {
         const innerArcs: Interval[] = all ? [[0, Math.PI * 2]] : hidden;
-        innerArcs.forEach((arc, i) => overlays.push(...arcPrims(A.x, A.y, A.r, arc, inner, { ...params, overshoot: 0 }, sd(`${id}:i${i}`), ftPerPt)));
+        innerArcs.forEach((arc, i) =>
+          overlays.push(
+            ...arcPrims(A.x, A.y, A.r, arc, inner, { ...params, overshoot: 0 }, sd(`${id}:i${i}`), ftPerPt),
+          ),
+        );
       }
     }
   }
@@ -321,11 +360,19 @@ export function buildScene(project: Project): Scene {
       if (isClean(params)) overlays.push({ t: 'path', pts: [o.p1, o.p2], closed: false, stroke: thick });
       else
         overlays.push(
-          ...opsToPrims(sketchOpenStroke([o.p1, o.p2], { width: thick.width }, { params, seed: sd(`${o.key}:t`), unitsPerPt: ftPerPt }), {
-            fill: color,
-            fillDark: color,
-            stroke: color,
-          }, 1),
+          ...opsToPrims(
+            sketchOpenStroke(
+              [o.p1, o.p2],
+              { width: thick.width },
+              { params, seed: sd(`${o.key}:t`), unitsPerPt: ftPerPt },
+            ),
+            {
+              fill: color,
+              fillDark: color,
+              stroke: color,
+            },
+            1,
+          ),
         );
       continue;
     }
@@ -341,8 +388,10 @@ export function buildScene(project: Project): Scene {
     const edge: StrokeP = o.mode === 'lens' ? thick : { ...thick, width: Math.max(0.75 * ftPerPt, overlapWidth * 0.4) };
     const ha = hiddenInterval(A, B);
     const hb = hiddenInterval(B, A);
-    if (ha === 'all') overlays.push(...arcPrims(A.x, A.y, A.r, [0, Math.PI * 2], edge, params, sd(`${o.key}:la`), ftPerPt));
-    else if (hb === 'all') overlays.push(...arcPrims(B.x, B.y, B.r, [0, Math.PI * 2], edge, params, sd(`${o.key}:lb`), ftPerPt));
+    if (ha === 'all')
+      overlays.push(...arcPrims(A.x, A.y, A.r, [0, Math.PI * 2], edge, params, sd(`${o.key}:la`), ftPerPt));
+    else if (hb === 'all')
+      overlays.push(...arcPrims(B.x, B.y, B.r, [0, Math.PI * 2], edge, params, sd(`${o.key}:lb`), ftPerPt));
     else {
       if (ha) overlays.push(...arcPrims(A.x, A.y, A.r, ha, edge, params, sd(`${o.key}:la`), ftPerPt));
       if (hb) overlays.push(...arcPrims(B.x, B.y, B.r, hb, edge, params, sd(`${o.key}:lb`), ftPerPt));
@@ -372,11 +421,19 @@ export function buildScene(project: Project): Scene {
     if (isClean(base)) connections.push({ t: 'path', pts: seg, closed: false, stroke });
     else
       connections.push(
-        ...opsToPrims(sketchOpenStroke(seg, { width: stroke.width, dash: stroke.dash }, { params: base, seed: sd(c.id), unitsPerPt: ftPerPt }), {
-          fill: CONNECTION_COLOR,
-          fillDark: CONNECTION_COLOR,
-          stroke: CONNECTION_COLOR,
-        }, 1),
+        ...opsToPrims(
+          sketchOpenStroke(
+            seg,
+            { width: stroke.width, dash: stroke.dash },
+            { params: base, seed: sd(c.id), unitsPerPt: ftPerPt },
+          ),
+          {
+            fill: CONNECTION_COLOR,
+            fillDark: CONNECTION_COLOR,
+            stroke: CONNECTION_COLOR,
+          },
+          1,
+        ),
       );
   }
 
@@ -384,7 +441,10 @@ export function buildScene(project: Project): Scene {
 }
 
 /** World-space box (feet) around a label's name lines; null when it has none. */
-export function labelNameRect(label: LabelPrim | null, ftPerPt: number): { minX: number; minY: number; maxX: number; maxY: number } | null {
+export function labelNameRect(
+  label: LabelPrim | null,
+  ftPerPt: number,
+): { minX: number; minY: number; maxX: number; maxY: number } | null {
   if (!label) return null;
   const lines = label.layout.lines.filter((l) => !l.secondary);
   if (lines.length === 0) return null;

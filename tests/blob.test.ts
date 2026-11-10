@@ -1,6 +1,14 @@
 import { describe, expect, it } from 'vitest';
 import { createNode, createProject } from '../src/model/factory';
-import { blobFromClicks, blobFromPocket, blobFromStroke, blobGeometry, circleRings, detachAnchors, toBlobShape } from '../src/model/blob';
+import {
+  blobFromClicks,
+  blobFromPocket,
+  blobFromStroke,
+  blobGeometry,
+  circleRings,
+  detachAnchors,
+  toBlobShape,
+} from '../src/model/blob';
 import { connectionSegment, containsPoint, nodeArea } from '../src/model/geometry';
 import { migrateProject } from '../src/model/migrate';
 import type { BlobShape, Project } from '../src/model/types';
@@ -59,13 +67,26 @@ describe('blob shapes', () => {
 
   it('clicks on one ring follow it the short way', () => {
     const { p } = project([[0, 0, 10]]);
-    const pts = blobFromClicks([{ x: 12, y: 0 }, { x: 0, y: 12 }, { x: 20, y: 20 }], circleRings(p), 2, 1);
+    const pts = blobFromClicks(
+      [
+        { x: 12, y: 0 },
+        { x: 0, y: 12 },
+        { x: 20, y: 20 },
+      ],
+      circleRings(p),
+      2,
+      1,
+    );
     expect(pts[0]).toMatchObject({ t: 'anchor', arc: true, dir: 1 });
     expect(pts[2].t).toBe('free');
   });
 
   it('fills an enclosed pocket between bubbles', () => {
-    const { p } = project([[0, 0, 10], [25, 0, 10], [12.5, 21, 10]]);
+    const { p } = project([
+      [0, 0, 10],
+      [25, 0, 10],
+      [12.5, 21, 10],
+    ]);
     const pts = blobFromPocket({ x: 12.5, y: 7 }, circleRings(p), 1, 0.5)!;
     expect(pts).not.toBeNull();
     expect(pts.filter((x) => x.t === 'anchor').length).toBeGreaterThanOrEqual(3);
@@ -74,8 +95,20 @@ describe('blob shapes', () => {
   });
 
   it('detaches anchors in place and survives save/load', () => {
-    const { p, ids } = project([[0, 0, 10], [40, 0, 5]]);
-    const pts = blobFromClicks([{ x: 12, y: 0 }, { x: 0, y: 12 }, { x: 25, y: 25 }], circleRings(p), 2, 1);
+    const { p, ids } = project([
+      [0, 0, 10],
+      [40, 0, 5],
+    ]);
+    const pts = blobFromClicks(
+      [
+        { x: 12, y: 0 },
+        { x: 0, y: 12 },
+        { x: 25, y: 25 },
+      ],
+      circleRings(p),
+      2,
+      1,
+    );
     const n = addBlob(p, pts);
     const pos = blobGeometry(n, p).ctrl;
     const shape = detachAnchors(n, p, (id) => id === ids[0]);

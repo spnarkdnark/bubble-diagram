@@ -23,7 +23,9 @@ const FILES: Record<Exclude<LabelFont, 'clean'>, { regular: string; bold?: strin
 export async function loadWebFont(font: LabelFont): Promise<void> {
   if (font === 'clean' || typeof document === 'undefined' || !document.fonts) return;
   const f = FILES[font];
-  await Promise.all([document.fonts.load(`400 20px ${f.css}`), document.fonts.load(`700 20px ${f.css}`)]).catch(() => undefined);
+  await Promise.all([document.fonts.load(`400 20px ${f.css}`), document.fonts.load(`700 20px ${f.css}`)]).catch(
+    () => undefined,
+  );
   clearTextMeasureCache();
 }
 

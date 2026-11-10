@@ -6,7 +6,10 @@ import { PAPER_LABELS } from '../../render/paper';
 import { LABEL_FONTS } from '../../render/scene';
 import { Field, Section, SelectField, Slider } from '../controls/Controls';
 
-export const PRESET_OPTIONS = [...PRESETS.map((p) => ({ value: p.id, label: p.label })), { value: 'custom', label: 'Custom' }];
+export const PRESET_OPTIONS = [
+  ...PRESETS.map((p) => ({ value: p.id, label: p.label })),
+  { value: 'custom', label: 'Custom' },
+];
 
 export function GraphicPanel() {
   const g = useDoc().settings.graphic;
@@ -29,7 +32,14 @@ export function GraphicPanel() {
         <Slider min={0} max={1} step={0.05} value={g.overshoot} onChange={(v) => A.tuneGraphic({ overshoot: v })} />
       </Field>
       <Field label="Passes" hint="Re-traced strokes">
-        <Slider min={1} max={3} step={1} value={g.passes} format={(v) => String(v)} onChange={(v) => A.tuneGraphic({ passes: v })} />
+        <Slider
+          min={1}
+          max={3}
+          step={1}
+          value={g.passes}
+          format={(v) => String(v)}
+          onChange={(v) => A.tuneGraphic({ passes: v })}
+        />
       </Field>
       <Field label="Pressure" hint="Line weight swells and tapers">
         <Slider min={0} max={1} step={0.05} value={g.pressure} onChange={(v) => A.tuneGraphic({ pressure: v })} />

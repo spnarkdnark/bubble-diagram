@@ -43,11 +43,17 @@ export function paperCanvas(paper: Paper, w: number, h: number, seed = 'paper'):
     const y = r() * c.height;
     const len = 3 + r() * (paper === 'warm' ? 14 : 8);
     const a = r() * Math.PI;
-    ctx.strokeStyle = paper === 'warm' ? `rgba(120,95,60,${0.04 + r() * 0.06})` : `rgba(90,100,110,${0.03 + r() * 0.04})`;
+    ctx.strokeStyle =
+      paper === 'warm' ? `rgba(120,95,60,${0.04 + r() * 0.06})` : `rgba(90,100,110,${0.03 + r() * 0.04})`;
     ctx.lineWidth = 0.4 + r() * 0.6;
     ctx.beginPath();
     ctx.moveTo(x, y);
-    ctx.quadraticCurveTo(x + Math.cos(a) * len * 0.5 + (r() - 0.5) * 3, y + Math.sin(a) * len * 0.5 + (r() - 0.5) * 3, x + Math.cos(a) * len, y + Math.sin(a) * len);
+    ctx.quadraticCurveTo(
+      x + Math.cos(a) * len * 0.5 + (r() - 0.5) * 3,
+      y + Math.sin(a) * len * 0.5 + (r() - 0.5) * 3,
+      x + Math.cos(a) * len,
+      y + Math.sin(a) * len,
+    );
     ctx.stroke();
   }
   const blobs = Math.round((c.width * c.height) / 40000);

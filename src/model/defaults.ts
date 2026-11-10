@@ -98,10 +98,7 @@ export const AUTO_STROKE_DARKEN = 0.35;
 
 export const CONNECTION_COLOR = '#555555';
 
-export const CONNECTION_STYLES: Record<
-  ConnectionType,
-  { label: string; weightPt: number; style: StrokeStyle }
-> = {
+export const CONNECTION_STYLES: Record<ConnectionType, { label: string; weightPt: number; style: StrokeStyle }> = {
   strong: { label: 'Strong adjacency', weightPt: 3, style: 'solid' },
   near: { label: 'Near', weightPt: 1, style: 'solid' },
   visual: { label: 'Visual / indirect', weightPt: 1, style: 'dashed' },

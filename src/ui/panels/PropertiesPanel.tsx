@@ -12,7 +12,9 @@ export function PropertiesPanel() {
       {sel.nodes.length > 0 && <BubbleProps ids={sel.nodes} />}
       {sel.nodes.length > 0 && <NodeOverlaps ids={sel.nodes} />}
       {sel.nodes.length === 0 && sel.overlaps.length > 0 && <OverlapProps keys={sel.overlaps} />}
-      {sel.nodes.length === 0 && sel.overlaps.length === 0 && sel.connections.length > 0 && <ConnectionProps ids={sel.connections} />}
+      {sel.nodes.length === 0 && sel.overlaps.length === 0 && sel.connections.length > 0 && (
+        <ConnectionProps ids={sel.connections} />
+      )}
       {sel.nodes.length === 0 && sel.connections.length === 0 && sel.overlaps.length === 0 && <DrawingPanel />}
       <CategoryPanel />
     </aside>

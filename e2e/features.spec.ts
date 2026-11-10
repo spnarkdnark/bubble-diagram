@@ -42,7 +42,9 @@ test('copy/paste at the cursor, paste style, and pasting table rows', async ({ p
   await page.keyboard.press('Control+Shift+v');
   await expect.poll(async () => (await nodes(page))[1].style.fillOpacity).toBe(0.3);
 
-  await page.evaluate(() => navigator.clipboard.writeText('name\tarea\tcategory\nKitchen\t400\tService\nPatio\t900\tExterior'));
+  await page.evaluate(() =>
+    navigator.clipboard.writeText('name\tarea\tcategory\nKitchen\t400\tService\nPatio\t900\tExterior'),
+  );
   await canvas.click(1000, 120);
   await page.keyboard.press('Control+v');
   await expect.poll(async () => (await nodes(page)).length).toBe(6);
@@ -124,7 +126,10 @@ test('CSV import, then export PDF, PNG and SVG with sketch style on', async ({ p
   for (const fmt of ['PDF', 'PNG', 'SVG']) {
     await page.getByRole('button', { name: 'Export', exact: true }).click();
     await page.locator(`.dialog .seg:has-text("${fmt}")`).click();
-    const [dl] = await Promise.all([page.waitForEvent('download'), page.locator(`.dialog button:has-text("Export ${fmt}")`).click()]);
+    const [dl] = await Promise.all([
+      page.waitForEvent('download'),
+      page.locator(`.dialog button:has-text("Export ${fmt}")`).click(),
+    ]);
     expect(dl.suggestedFilename()).toMatch(new RegExp(`\\.${fmt.toLowerCase()}$`));
     expect((await dl.createReadStream()).readableLength >= 0).toBe(true);
   }

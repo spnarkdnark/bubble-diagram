@@ -7,7 +7,17 @@ export interface OverrideMark {
   reset: () => void;
 }
 
-export function Field({ label, children, hint, override }: { label: string; children: ReactNode; hint?: string; override?: OverrideMark }) {
+export function Field({
+  label,
+  children,
+  hint,
+  override,
+}: {
+  label: string;
+  children: ReactNode;
+  hint?: string;
+  override?: OverrideMark;
+}) {
   return (
     <label className="field" title={hint}>
       <span className="field-label">
@@ -95,7 +105,15 @@ export function NumberField(props: {
 }
 
 /** Live text input (every keystroke applies; caller should coalesce undo). */
-export function TextField({ value, onChange, placeholder }: { value: string | null; onChange: (v: string) => void; placeholder?: string }) {
+export function TextField({
+  value,
+  onChange,
+  placeholder,
+}: {
+  value: string | null;
+  onChange: (v: string) => void;
+  placeholder?: string;
+}) {
   return (
     <input
       className="input"
@@ -148,7 +166,15 @@ export function SelectField<T extends string>({
   );
 }
 
-export function Checkbox({ checked, onChange, label }: { checked: boolean | null; onChange: (v: boolean) => void; label: string }) {
+export function Checkbox({
+  checked,
+  onChange,
+  label,
+}: {
+  checked: boolean | null;
+  onChange: (v: boolean) => void;
+  label: string;
+}) {
   const ref = useRef<HTMLInputElement>(null);
   useEffect(() => {
     if (ref.current) ref.current.indeterminate = checked === null;
@@ -161,11 +187,34 @@ export function Checkbox({ checked, onChange, label }: { checked: boolean | null
   );
 }
 
-export function Slider({ value, onChange, min, max, step, format }: { value: number | null; onChange: (v: number) => void; min: number; max: number; step: number; format?: (v: number) => string }) {
+export function Slider({
+  value,
+  onChange,
+  min,
+  max,
+  step,
+  format,
+}: {
+  value: number | null;
+  onChange: (v: number) => void;
+  min: number;
+  max: number;
+  step: number;
+  format?: (v: number) => string;
+}) {
   return (
     <span className="slider">
-      <input type="range" min={min} max={max} step={step} value={value ?? (min + max) / 2} onChange={(e) => onChange(parseFloat(e.target.value))} />
-      <span className="slider-value">{value === null ? MIXED : format ? format(value) : `${Math.round(value * 100)}%`}</span>
+      <input
+        type="range"
+        min={min}
+        max={max}
+        step={step}
+        value={value ?? (min + max) / 2}
+        onChange={(e) => onChange(parseFloat(e.target.value))}
+      />
+      <span className="slider-value">
+        {value === null ? MIXED : format ? format(value) : `${Math.round(value * 100)}%`}
+      </span>
     </span>
   );
 }

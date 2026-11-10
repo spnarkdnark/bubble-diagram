@@ -29,8 +29,7 @@ export interface SvgResult {
   heightPt: number;
 }
 
-const esc = (s: string) =>
-  s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+const esc = (s: string) => s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
 const n = (v: number) => +v.toFixed(3);
 const FOOTER_PT = 40;
 
@@ -41,7 +40,9 @@ function subsetProject(project: Project, ids: Set<Id>): Project {
     ...project,
     nodes: Object.fromEntries(Object.entries(project.nodes).filter(([id]) => ids.has(id))),
     nodeOrder: project.nodeOrder.filter((id) => ids.has(id)),
-    connections: Object.fromEntries(Object.entries(project.connections).filter(([, c]) => ids.has(c.from) && ids.has(c.to))),
+    connections: Object.fromEntries(
+      Object.entries(project.connections).filter(([, c]) => ids.has(c.from) && ids.has(c.to)),
+    ),
   };
 }
 
@@ -60,7 +61,8 @@ function primSvg(p: Prim, X: (ft: number) => number, Y: (ft: number) => number, 
       return `<circle cx="${n(X(p.cx))}" cy="${n(Y(p.cy))}" r="${n(p.r * k)}"${fill(p.fill)}${stroke(p.stroke)}/>`;
     case 'arc': {
       const span = p.a1 - p.a0;
-      if (span >= Math.PI * 2 - 1e-6) return `<circle cx="${n(X(p.cx))}" cy="${n(Y(p.cy))}" r="${n(p.r * k)}" fill="none"${stroke(p.stroke)}/>`;
+      if (span >= Math.PI * 2 - 1e-6)
+        return `<circle cx="${n(X(p.cx))}" cy="${n(Y(p.cy))}" r="${n(p.r * k)}" fill="none"${stroke(p.stroke)}/>`;
       const x0 = X(p.cx + Math.cos(p.a0) * p.r);
       const y0 = Y(p.cy + Math.sin(p.a0) * p.r);
       const x1 = X(p.cx + Math.cos(p.a1) * p.r);
@@ -78,7 +80,12 @@ function primSvg(p: Prim, X: (ft: number) => number, Y: (ft: number) => number, 
 
 export function contentBounds(project: Project, nodeIds?: string[]): Bounds | null {
   const ids = nodeIds ?? project.nodeOrder;
-  return unionBounds(ids.map((id) => project.nodes[id]).filter(Boolean).map((n) => nodeBounds(n, project)));
+  return unionBounds(
+    ids
+      .map((id) => project.nodes[id])
+      .filter(Boolean)
+      .map((n) => nodeBounds(n, project)),
+  );
 }
 
 export function buildSvg(project: Project, opts: ExportOptions = DEFAULT_EXPORT_OPTIONS): SvgResult | null {
@@ -106,8 +113,13 @@ export function buildSvg(project: Project, opts: ExportOptions = DEFAULT_EXPORT_
   if (project.settings.graphic.paper !== 'none') {
     // ~110 dpi texture, capped so very large sheets stay a reasonable file size
     const dpi = Math.min(110, 4000 / Math.max(W / PT_PER_IN, H / PT_PER_IN));
-    const url = paperCanvas(project.settings.graphic.paper, (W / PT_PER_IN) * dpi, (H / PT_PER_IN) * dpi).toDataURL('image/jpeg', 0.85);
-    out.push(`<image x="0" y="0" width="${n(W)}" height="${n(H)}" preserveAspectRatio="none" href="${url}" xlink:href="${url}"/>`);
+    const url = paperCanvas(project.settings.graphic.paper, (W / PT_PER_IN) * dpi, (H / PT_PER_IN) * dpi).toDataURL(
+      'image/jpeg',
+      0.85,
+    );
+    out.push(
+      `<image x="0" y="0" width="${n(W)}" height="${n(H)}" preserveAspectRatio="none" href="${url}" xlink:href="${url}"/>`,
+    );
   }
 
   if (opts.includeGrid) {
@@ -140,7 +152,9 @@ export function buildSvg(project: Project, opts: ExportOptions = DEFAULT_EXPORT_
         // hand fonts become vector outlines so PDFs/SVGs need no installed font
         const w = of.font.getAdvanceWidth(l.text, l.sizePt);
         const d = of.font.getPath(l.text, cx - w / 2, baseline, l.sizePt).toPathData(2);
-        const bold = of.fakeBold ? ` stroke="${l.color}" stroke-width="${n(l.sizePt * 0.045)}" stroke-linejoin="round"` : '';
+        const bold = of.fakeBold
+          ? ` stroke="${l.color}" stroke-width="${n(l.sizePt * 0.045)}" stroke-linejoin="round"`
+          : '';
         out.push(`<path d="${d}" fill="${l.color}"${bold}/>`);
       } else {
         out.push(

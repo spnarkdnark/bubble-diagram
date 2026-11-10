@@ -27,7 +27,11 @@ export function OverlapModeSelect({ keys }: { keys: string[] }) {
 export function OverlapProps({ keys }: { keys: string[] }) {
   const doc = useDoc();
   const live = new Set(findOverlaps(doc).map((o) => o.key));
-  const names = (k: string) => k.split('|').map((id) => doc.nodes[id]?.name ?? '?').join(' ↔ ');
+  const names = (k: string) =>
+    k
+      .split('|')
+      .map((id) => doc.nodes[id]?.name ?? '?')
+      .join(' ↔ ');
   return (
     <Section title={keys.length === 1 ? 'Overlap' : `${keys.length} overlaps`}>
       {keys.map((k) => (
@@ -38,7 +42,8 @@ export function OverlapProps({ keys }: { keys: string[] }) {
       ))}
       <OverlapModeSelect keys={keys} />
       <p className="tip flush">
-        Overlapping bubbles read as spaces with a direct relationship. Pick how this one is drawn, or leave it on the drawing default.
+        Overlapping bubbles read as spaces with a direct relationship. Pick how this one is drawn, or leave it on the
+        drawing default.
       </p>
     </Section>
   );
@@ -57,7 +62,9 @@ export function NodeOverlaps({ ids }: { ids: string[] }) {
         const label = other ? doc.nodes[other].name : `${doc.nodes[o.a].name} ↔ ${doc.nodes[o.b].name}`;
         return (
           <div key={o.key} className="field">
-            <span className="field-label ellipsis" title={label}>{label}</span>
+            <span className="field-label ellipsis" title={label}>
+              {label}
+            </span>
             <span className="field-control">
               <OverlapModeSelect keys={[o.key]} />
             </span>

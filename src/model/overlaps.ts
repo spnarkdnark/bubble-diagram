@@ -71,7 +71,16 @@ export function findOverlaps(project: Project): Overlap[] {
       // marker at the middle of the lens (between the two inner arc midpoints)
       const innerA = { x: A.x + (dx / d) * A.r, y: A.y + (dy / d) * A.r };
       const innerB = { x: B.x - (dx / d) * B.r, y: B.y - (dy / d) * B.r };
-      out.push({ key, a, b, mode, contained, p1, p2, marker: { x: (innerA.x + innerB.x) / 2, y: (innerA.y + innerB.y) / 2 } });
+      out.push({
+        key,
+        a,
+        b,
+        mode,
+        contained,
+        p1,
+        p2,
+        marker: { x: (innerA.x + innerB.x) / 2, y: (innerA.y + innerB.y) / 2 },
+      });
     }
   }
   return out;
@@ -107,7 +116,10 @@ const TAU = Math.PI * 2;
  * Angular interval of circle A's boundary that lies inside circle B.
  * Returns 'all' when A is inside B, null when none of A is inside B.
  */
-export function hiddenInterval(A: { x: number; y: number; r: number }, B: { x: number; y: number; r: number }): Interval | 'all' | null {
+export function hiddenInterval(
+  A: { x: number; y: number; r: number },
+  B: { x: number; y: number; r: number },
+): Interval | 'all' | null {
   const d = Math.hypot(B.x - A.x, B.y - A.y);
   if (d >= A.r + B.r) return null;
   if (d + A.r <= B.r) return 'all';

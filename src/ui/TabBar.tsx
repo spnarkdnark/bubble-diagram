@@ -23,7 +23,10 @@ export function TabBar() {
   return (
     <nav className="tabbar" aria-label="Open diagrams">
       <div className="tabbar-mark" aria-hidden>
-        <svg width="16" height="16" viewBox="0 0 16 16"><circle cx="6" cy="7" r="4.2" fill="none" stroke="currentColor" strokeWidth="1.3" /><circle cx="11" cy="10" r="3.2" fill="none" stroke="currentColor" strokeWidth="1.3" /></svg>
+        <svg width="16" height="16" viewBox="0 0 16 16">
+          <circle cx="6" cy="7" r="4.2" fill="none" stroke="currentColor" strokeWidth="1.3" />
+          <circle cx="11" cy="10" r="3.2" fill="none" stroke="currentColor" strokeWidth="1.3" />
+        </svg>
       </div>
       <div className="tabs" role="tablist" onDragOver={(e) => e.preventDefault()}>
         {order.map((id, i) => {

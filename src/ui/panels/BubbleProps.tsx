@@ -22,26 +22,37 @@ export function BubbleProps({ ids }: { ids: Id[] }) {
   const catId = common(nodes, (n) => n.categoryId);
 
   const src: StyleSource = {
-    get: <K extends StyleKey>(k: K) => common(nodes, (n) => (n.style[k] !== undefined ? n.style[k] : resolveStyle(n, doc)[k])) as any,
+    get: <K extends StyleKey>(k: K) =>
+      common(nodes, (n) => (n.style[k] !== undefined ? n.style[k] : resolveStyle(n, doc)[k])) as any,
     set: (k, v) => A.setNodeStyle(ids, k, v),
     strokeColor: common(resolved, (s) => s.stroke),
     override: (k) => {
       const flags = nodes.map((n) => n.style[k] !== undefined);
-      return { on: flags.every(Boolean) ? true : flags.some(Boolean) ? null : false, reset: () => A.resetNodeStyle(ids, [k]) };
+      return {
+        on: flags.every(Boolean) ? true : flags.some(Boolean) ? null : false,
+        reset: () => A.resetNodeStyle(ids, [k]),
+      };
     },
   };
   // for the auto-outline checkbox, "get('stroke')" must reflect the resolved (possibly inherited) choice
   const getRaw = src.get;
   src.get = ((k: StyleKey) =>
     k === 'stroke'
-      ? common(nodes, (n) => (n.style.stroke !== undefined ? n.style.stroke : (doc.categories[n.categoryId ?? '']?.style ?? doc.settings.defaultStyle).stroke))
+      ? common(nodes, (n) =>
+          n.style.stroke !== undefined
+            ? n.style.stroke
+            : (doc.categories[n.categoryId ?? '']?.style ?? doc.settings.defaultStyle).stroke,
+        )
       : getRaw(k)) as StyleSource['get'];
 
   return (
     <>
       <Section title={single ? (blobs.length ? 'Shape' : 'Bubble') : `${nodes.length} elements`}>
         <Field label="Name">
-          <TextField value={common(nodes, (n) => n.name)} onChange={(v) => A.updateNodes(ids, (n) => void (n.name = v), 'name')} />
+          <TextField
+            value={common(nodes, (n) => n.name)}
+            onChange={(v) => A.updateNodes(ids, (n) => void (n.name = v), 'name')}
+          />
         </Field>
         <Field label="Category">
           <SelectField
@@ -57,38 +68,38 @@ export function BubbleProps({ ids }: { ids: Id[] }) {
 
       <Section title="Size">
         {circles.length > 0 && (
-        <>
-        <Field label="Radius" hint={`Type 12.5 or 12'-6"`}>
-          <NumberField
-            value={radius}
-            format={formatFeetInches}
-            parse={(s) => parseLength(s)}
-            step={doc.settings.snap.radiusIncrementFt}
-            min={MIN_RADIUS_FT}
-            onCommit={(v) => A.setRadius(circleIds, v)}
-          />
-        </Field>
-        <Field label="Diameter" hint={`Type 25 or 24'-6"`}>
-          <NumberField
-            value={radius === null ? null : radius * 2}
-            format={formatFeetInches}
-            parse={(s) => parseLength(s)}
-            step={doc.settings.snap.radiusIncrementFt * 2}
-            min={MIN_RADIUS_FT * 2}
-            onCommit={(v) => A.setRadius(circleIds, v / 2)}
-          />
-        </Field>
-        <Field label="Area" hint="Type the program area (e.g. 1200 or 1,200 sf); the radius is calculated from it">
-          <NumberField
-            value={common(circles, (n) => Math.round(nodeArea(n, doc)))}
-            format={formatArea}
-            parse={(s) => parseArea(s)}
-            step={10}
-            min={Math.ceil(Math.PI * MIN_RADIUS_FT * MIN_RADIUS_FT)}
-            onCommit={(v) => A.setRadius(circleIds, radiusFromArea(v))}
-          />
-        </Field>
-        </>
+          <>
+            <Field label="Radius" hint={`Type 12.5 or 12'-6"`}>
+              <NumberField
+                value={radius}
+                format={formatFeetInches}
+                parse={(s) => parseLength(s)}
+                step={doc.settings.snap.radiusIncrementFt}
+                min={MIN_RADIUS_FT}
+                onCommit={(v) => A.setRadius(circleIds, v)}
+              />
+            </Field>
+            <Field label="Diameter" hint={`Type 25 or 24'-6"`}>
+              <NumberField
+                value={radius === null ? null : radius * 2}
+                format={formatFeetInches}
+                parse={(s) => parseLength(s)}
+                step={doc.settings.snap.radiusIncrementFt * 2}
+                min={MIN_RADIUS_FT * 2}
+                onCommit={(v) => A.setRadius(circleIds, v / 2)}
+              />
+            </Field>
+            <Field label="Area" hint="Type the program area (e.g. 1200 or 1,200 sf); the radius is calculated from it">
+              <NumberField
+                value={common(circles, (n) => Math.round(nodeArea(n, doc)))}
+                format={formatArea}
+                parse={(s) => parseArea(s)}
+                step={10}
+                min={Math.ceil(Math.PI * MIN_RADIUS_FT * MIN_RADIUS_FT)}
+                onCommit={(v) => A.setRadius(circleIds, radiusFromArea(v))}
+              />
+            </Field>
+          </>
         )}
         {blobs.length > 0 && (
           <Field label="Gap to bubbles" hint="Distance between attached edges and the bubbles they hug">
@@ -98,7 +109,12 @@ export function BubbleProps({ ids }: { ids: Id[] }) {
               parse={(s) => parseLength(s)}
               step={0.5}
               min={0}
-              onCommit={(v) => A.setBlobGap(blobs.map((n) => n.id), v)}
+              onCommit={(v) =>
+                A.setBlobGap(
+                  blobs.map((n) => n.id),
+                  v,
+                )
+              }
             />
           </Field>
         )}
@@ -122,21 +138,36 @@ export function BubbleProps({ ids }: { ids: Id[] }) {
             Reset to category
           </button>
           {single && catId && (
-            <button className="btn" title="Apply this bubble's look to every bubble in its category" onClick={() => A.makeCategoryStyle(ids[0])}>
+            <button
+              className="btn"
+              title="Apply this bubble's look to every bubble in its category"
+              onClick={() => A.makeCategoryStyle(ids[0])}
+            >
               Make category style
             </button>
           )}
         </div>
       )}
       <div className="button-row">
-        <button className="btn" onClick={A.duplicateSelection}>Duplicate</button>
-        <button className="btn" onClick={() => A.bringToFront(ids)}>To front</button>
-        <button className="btn danger" onClick={A.deleteSelection}>Delete</button>
+        <button className="btn" onClick={A.duplicateSelection}>
+          Duplicate
+        </button>
+        <button className="btn" onClick={() => A.bringToFront(ids)}>
+          To front
+        </button>
+        <button className="btn danger" onClick={A.deleteSelection}>
+          Delete
+        </button>
       </div>
       <p className="tip">
-        {blobs.length > 0
-          ? 'Drag a point to move it; near a bubble it snaps on (Alt: no snapping). Double-click a point to delete it, or the edge to add one.'
-          : <>A dot next to a setting means it overrides the category. Scroll over a selected bubble to resize ±{formatLengthCompact(doc.settings.snap.radiusIncrementFt)} (Shift: ±1").</>}
+        {blobs.length > 0 ? (
+          'Drag a point to move it; near a bubble it snaps on (Alt: no snapping). Double-click a point to delete it, or the edge to add one.'
+        ) : (
+          <>
+            A dot next to a setting means it overrides the category. Scroll over a selected bubble to resize ±
+            {formatLengthCompact(doc.settings.snap.radiusIncrementFt)} (Shift: ±1").
+          </>
+        )}
       </p>
     </>
   );

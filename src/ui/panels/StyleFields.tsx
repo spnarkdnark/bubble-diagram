@@ -1,5 +1,14 @@
 import type { LabelSecondary, StrokeStyle, StyleKey, StyleProps } from '../../model/types';
-import { Checkbox, ColorField, Field, NumberField, Section, SelectField, Slider, type OverrideMark } from '../controls/Controls';
+import {
+  Checkbox,
+  ColorField,
+  Field,
+  NumberField,
+  Section,
+  SelectField,
+  Slider,
+  type OverrideMark,
+} from '../controls/Controls';
 
 const fmtPt = (v: number) => `${+v.toFixed(2)} pt`;
 const parsePt = (s: string) => {
@@ -31,14 +40,24 @@ export function StyleFields({ src, compact }: { src: StyleSource; compact?: bool
           <ColorField value={src.get('fill')} onChange={(c) => src.set('fill', c)} />
         </Field>
         <Field label="Opacity" override={o?.('fillOpacity')}>
-          <Slider min={0} max={1} step={0.05} value={src.get('fillOpacity')} onChange={(v) => src.set('fillOpacity', v)} />
+          <Slider
+            min={0}
+            max={1}
+            step={0.05}
+            value={src.get('fillOpacity')}
+            onChange={(v) => src.set('fillOpacity', v)}
+          />
         </Field>
       </Wrap>
 
       <Wrap title="Outline">
         <Field label="Color" override={o?.('stroke')}>
           <span className="stack">
-            <Checkbox label="Auto (darker fill)" checked={auto} onChange={(v) => src.set('stroke', v ? null : src.strokeColor ?? '#666666')} />
+            <Checkbox
+              label="Auto (darker fill)"
+              checked={auto}
+              onChange={(v) => src.set('stroke', v ? null : (src.strokeColor ?? '#666666'))}
+            />
             {auto === false && <ColorField value={src.strokeColor} onChange={(c) => src.set('stroke', c)} />}
           </span>
         </Field>
@@ -105,8 +124,18 @@ export function StyleFields({ src, compact }: { src: StyleSource; compact?: bool
       </Wrap>
 
       <Wrap title="Sketch">
-        <Field label="Amount" hint="Multiplies the drawing's sketch character. 0% draws this cleanly." override={o?.('sketchAmount')}>
-          <Slider min={0} max={2} step={0.1} value={src.get('sketchAmount')} onChange={(v) => src.set('sketchAmount', v)} />
+        <Field
+          label="Amount"
+          hint="Multiplies the drawing's sketch character. 0% draws this cleanly."
+          override={o?.('sketchAmount')}
+        >
+          <Slider
+            min={0}
+            max={2}
+            step={0.1}
+            value={src.get('sketchAmount')}
+            onChange={(v) => src.set('sketchAmount', v)}
+          />
         </Field>
       </Wrap>
     </>

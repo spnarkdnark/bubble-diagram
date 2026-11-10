@@ -87,7 +87,11 @@ export function installSelectionPruning() {
     const nodes = sel.nodes.filter((id) => d.nodes[id]);
     const connections = sel.connections.filter((id) => d.connections[id]);
     const overlaps = sel.overlaps.filter((k) => k.split('|').every((id) => d.nodes[id]));
-    if (nodes.length !== sel.nodes.length || connections.length !== sel.connections.length || overlaps.length !== sel.overlaps.length)
+    if (
+      nodes.length !== sel.nodes.length ||
+      connections.length !== sel.connections.length ||
+      overlaps.length !== sel.overlaps.length
+    )
       ui().select({ nodes, connections, overlaps });
     const cf = ui().connectFrom;
     if (cf && !d.nodes[cf]) ui().setConnectFrom(null);
@@ -153,7 +157,12 @@ export function deleteSelection() {
   const doc = getDoc();
   // shapes hugging deleted bubbles keep their outline: anchors become free points
   const detached = Object.values(doc.nodes)
-    .filter((n) => n.shape.kind === 'blob' && !nodeSet.has(n.id) && n.shape.points.some((p) => p.t === 'anchor' && nodeSet.has(p.node)))
+    .filter(
+      (n) =>
+        n.shape.kind === 'blob' &&
+        !nodeSet.has(n.id) &&
+        n.shape.points.some((p) => p.t === 'anchor' && nodeSet.has(p.node)),
+    )
     .map((n) => ({ id: n.id, shape: detachAnchors(n, doc, (id) => nodeSet.has(id)) }));
   commit((d) => {
     for (const x of detached) d.nodes[x.id].shape = x.shape;
@@ -328,9 +337,12 @@ export function setGrid(patch: Partial<Project['settings']['grid']>) {
 }
 
 export function renameProject(name: string) {
-  commit((d) => {
-    d.meta.name = name;
-  }, { coalesceKey: 'project-name' });
+  commit(
+    (d) => {
+      d.meta.name = name;
+    },
+    { coalesceKey: 'project-name' },
+  );
 }
 
 // ---------- view ----------
@@ -438,8 +450,16 @@ export function createBlob(pts: BuildPoint[]): Id | null {
   if (pts.length < 3) return null;
   const doc = getDoc();
   const { shape, origin } = toBlobShape(pts, doc.settings.shapeGapFt, circleRings(doc));
-  const exterior = Object.values(doc.categories).find((c) => c.name.trim().toLowerCase() === EXTERIOR_CATEGORY.toLowerCase());
-  const n = createNode({ name: `Outdoor ${shapeCount() + 1}`, x: origin.x, y: origin.y, shape, categoryId: exterior?.id ?? null });
+  const exterior = Object.values(doc.categories).find(
+    (c) => c.name.trim().toLowerCase() === EXTERIOR_CATEGORY.toLowerCase(),
+  );
+  const n = createNode({
+    name: `Outdoor ${shapeCount() + 1}`,
+    x: origin.x,
+    y: origin.y,
+    shape,
+    categoryId: exterior?.id ?? null,
+  });
   commit((d) => {
     d.nodes[n.id] = n;
     // exterior spaces sit behind the bubbles

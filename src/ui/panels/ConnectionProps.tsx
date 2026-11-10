@@ -10,7 +10,15 @@ export function LinePreview({ type }: { type: ConnectionType }) {
   const st = CONNECTION_STYLES[type];
   return (
     <svg width="36" height="10" aria-hidden>
-      <line x1="2" y1="5" x2="34" y2="5" stroke="currentColor" strokeWidth={st.weightPt} strokeDasharray={st.style === 'dashed' ? '4 3' : undefined} />
+      <line
+        x1="2"
+        y1="5"
+        x2="34"
+        y2="5"
+        stroke="currentColor"
+        strokeWidth={st.weightPt}
+        strokeDasharray={st.style === 'dashed' ? '4 3' : undefined}
+      />
     </svg>
   );
 }
@@ -38,7 +46,9 @@ export function ConnectionProps({ ids }: { ids: Id[] }) {
         ))}
       </div>
       <div className="button-row">
-        <button className="btn danger" onClick={A.deleteSelection}>Delete</button>
+        <button className="btn danger" onClick={A.deleteSelection}>
+          Delete
+        </button>
       </div>
     </Section>
   );

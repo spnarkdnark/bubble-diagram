@@ -8,7 +8,10 @@ function setup() {
   const a = createNode({ name: 'A', x: 0, y: 0, categoryId: cat.id, style: { fill: '#ff0000' } });
   const b = createNode({ name: 'B', x: 30, y: 0 });
   const c = createConnection(a.id, b.id, 'strong');
-  p.nodes[a.id] = a; p.nodes[b.id] = b; p.nodeOrder.push(a.id, b.id); p.connections[c.id] = c;
+  p.nodes[a.id] = a;
+  p.nodes[b.id] = b;
+  p.nodeOrder.push(a.id, b.id);
+  p.connections[c.id] = c;
   p.overlaps[overlapKey(a.id, b.id)] = { mode: 'lens' };
   return { p, a, b, cat };
 }

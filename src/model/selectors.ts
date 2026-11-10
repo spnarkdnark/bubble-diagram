@@ -37,7 +37,9 @@ export function isOverridden(node: BubbleNode, key: StyleKey): boolean {
 export function secondaryLabel(node: BubbleNode, project: Project, style = resolveStyle(node, project)): string | null {
   switch (style.labelSecondary) {
     case 'radius':
-      return node.shape.kind === 'circle' ? `R ${formatLengthShort(shapeSize(node.shape))}` : formatArea(nodeArea(node, project));
+      return node.shape.kind === 'circle'
+        ? `R ${formatLengthShort(shapeSize(node.shape))}`
+        : formatArea(nodeArea(node, project));
     case 'area':
       return formatArea(nodeArea(node, project));
     default:
@@ -59,7 +61,5 @@ export function totalArea(project: Project, ids?: string[]): number {
 }
 
 export function findConnection(project: Project, a: string, b: string): Connection | undefined {
-  return Object.values(project.connections).find(
-    (c) => (c.from === a && c.to === b) || (c.from === b && c.to === a),
-  );
+  return Object.values(project.connections).find((c) => (c.from === a && c.to === b) || (c.from === b && c.to === a));
 }

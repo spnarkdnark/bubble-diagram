@@ -4,11 +4,13 @@ Web app for architectural bubble (program) diagrams. React 18 + Vite + TypeScrip
 react-konva canvas, Zustand + Immer state. No UI framework; plain CSS with tokens.
 
 ## Commands
+
 - `npm run dev` — dev server (http://localhost:5173)
 - `npm test` — Vitest unit tests (`tests/`, model/store/io only; no DOM)
 - `npm run typecheck` / `npm run build`
 
 ## The one rule: units
+
 - **Model space = feet.** Every coordinate, radius, grid spacing, nudge is in feet.
   Never store pixels in the document.
 - **Paper space = points (1/72").** Line weights (`strokeWeightPt`) and font sizes
@@ -22,6 +24,7 @@ react-konva canvas, Zustand + Immer state. No UI framework; plain CSS with token
   overlay sizes (handles, hit widths) are `px / k` where `k` is the stage scale.
 
 ## Layout
+
 ```
 src/model/    pure TS, no React: types, units, geometry, color, defaults, factory,
               selectors (resolveStyle etc.), migrate, overlaps (detection/arcs),
@@ -45,8 +48,10 @@ tests/        Vitest
 ```
 
 ## Data model (src/model/types.ts)
+
 `Project { schemaVersion, meta, settings, categories, categoryOrder, nodes, nodeOrder, connections }`
 Schema v2 (v1 files upgrade in `migrate.ts`).
+
 - `BubbleNode { id, name, x, y, shape, categoryId, style }` — x/y = center (circles) or
   the origin free blob points are relative to.
 - `shape` is a tagged union: `{kind:'circle', radiusFt}` | `{kind:'blob', points, gapFt}`.
@@ -71,6 +76,7 @@ Schema v2 (v1 files upgrade in `migrate.ts`).
 - Bump `SCHEMA_VERSION` and add a migration case in `model/migrate.ts` on format change.
 
 ## Tabs
+
 `store/workspaceStore.ts`. The ACTIVE tab's document/history live in useDocument and its
 view/selection in useUi, exactly as before tabs existed, so features stay tab-unaware.
 Inactive tabs are parked (`parked[id] = {history, view, selection}`) and swapped in by
@@ -79,6 +85,7 @@ project + view under `bubble-diagram:workspace:v1` (migrates the old single-doc 
 undo history is per tab and in memory only. Closed tabs can be reopened from the toast.
 
 ## State & undo conventions
+
 - Every document change goes through `useDocument.commit(recipe, {coalesceKey?})`
   (usually via `store/actions.ts`). Never `set()` the document directly.
 - Continuous gestures (drag, resize-handle): `beginGesture()` → `preview()`… →
@@ -89,6 +96,7 @@ undo history is per tab and in memory only. Closed tabs can be reopened from the
 - Autosave writes the current document to localStorage (debounced).
 
 ## Rendering
+
 `render/scene.ts#buildScene(project)` returns primitives in feet (circles, arcs,
 paths, labels). Canvas draws them in one Konva `Shape` (`drawCanvas.ts`); the SVG
 exporter writes the same primitives. Sketch mode swaps exact geometry for seeded
@@ -98,6 +106,7 @@ Hand fonts are bundled via @fontsource; exports outline them with opentype.js
 (`fonts.loadOutlineFont` must run before `buildSvg`).
 
 ## Interaction summary
+
 - Tools: V select, B bubble (click to place), C connect (click A then B; Esc exits),
   S shape (drag freehand or click points; Enter/double-click/first point closes;
   double-click a gap between bubbles to fill the pocket).
@@ -120,6 +129,7 @@ Hand fonts are bundled via @fontsource; exports outline them with opentype.js
   ⌘/Ctrl+S save, F zoom to fit, ⌘/Ctrl+0 100% (true paper size).
 
 ## CSV import
+
 Columns (case-insensitive, aliases in `csvImport.ts`): `name`, `radius`, `category`,
 optional `area`. Radius accepts `12.5`, `12'`, `12'-6"`; area accepts `1200`, `1,200 sf`.
 Radius wins if both are given; otherwise radius = sqrt(area/π). Unknown categories are
@@ -127,6 +137,7 @@ created with the next palette color. Imported bubbles go in a loose grid below e
 content (`autoLayout.ts`). Sample: `examples/sample-program.csv`.
 
 ## Export
+
 - `io/export/svg.ts` builds SVG from the data model in paper points at true scale
   (independent of zoom). PDF = svg2pdf.js onto a jsPDF page (fit-to-drawing or a
   standard sheet, centered, warns if too big). PNG = SVG rasterized at chosen DPI.
@@ -134,6 +145,7 @@ content (`autoLayout.ts`). Sample: `examples/sample-program.csv`.
   they match.
 
 ## Testing notes
+
 - Unit tests cover units, geometry, history, project file + v1 migration, CSV,
   styles, clipboard, overlaps, sketch determinism, blob building/attachment.
 - Canvas hit-testing is geometric (`canvas/hitTest.ts`); Konva layers are
@@ -142,10 +154,12 @@ content (`autoLayout.ts`). Sample: `examples/sample-program.csv`.
 - jsPDF/svg2pdf are lazy-loaded on first PDF export.
 
 ## Out of scope for v1 (hooks left in place)
+
 - Ellipses / rounded rectangles: `Shape` union + geometry.ts switches + scene.ts.
 - Metric: `settings.unitSystem` + formatting/parsing confined to units.ts.
 - Layers / locking: reserved optional `layerId` / `locked` on `BubbleNode`.
 
 ## Style
+
 Neutral grays, white space, system sans-serif UI; labels use Helvetica/Arial (matches
 PDF built-in font). Category palette in `model/defaults.ts` (light, muted).

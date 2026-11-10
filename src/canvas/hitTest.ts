@@ -46,7 +46,8 @@ export function hitTest(
     const h = handlePosition(project, handleFor);
     if (h && Math.hypot(p.x - h.x, p.y - h.y) <= tolFt * 1.2) return { kind: 'handle', id: handleFor };
   }
-  for (const m of markers) if (Math.hypot(p.x - m.marker.x, p.y - m.marker.y) <= tolFt * 1.1) return { kind: 'overlap', key: m.key };
+  for (const m of markers)
+    if (Math.hypot(p.x - m.marker.x, p.y - m.marker.y) <= tolFt * 1.1) return { kind: 'overlap', key: m.key };
   const node = topNodeAt(project, p);
   if (node) return { kind: 'node', id: node };
   for (const c of Object.values(project.connections)) {

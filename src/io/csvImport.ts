@@ -30,7 +30,11 @@ const ALIASES: Record<string, string[]> = {
 };
 
 function canonicalHeader(h: string): string | null {
-  const clean = h.toLowerCase().replace(/\(.*?\)/g, '').replace(/[^a-z ]/g, '').trim();
+  const clean = h
+    .toLowerCase()
+    .replace(/\(.*?\)/g, '')
+    .replace(/[^a-z ]/g, '')
+    .trim();
   for (const [key, names] of Object.entries(ALIASES)) if (names.includes(clean)) return key;
   return null;
 }
@@ -74,7 +78,11 @@ export function parseCsv(text: string): CsvParseResult {
  * Build new nodes/categories for the rows, laid out in a grid below existing
  * content (or centered on `fallbackCenter` for an empty drawing).
  */
-export function buildImport(project: Project, rows: CsvRow[], fallbackCenter: Point): { nodes: BubbleNode[]; categories: Category[] } {
+export function buildImport(
+  project: Project,
+  rows: CsvRow[],
+  fallbackCenter: Point,
+): { nodes: BubbleNode[]; categories: Category[] } {
   const byName = new Map(Object.values(project.categories).map((c) => [c.name.trim().toLowerCase(), c.id]));
   const newCats: Category[] = [];
   const working = { ...project, categories: { ...project.categories } };
@@ -101,7 +109,13 @@ export function buildImport(project: Project, rows: CsvRow[], fallbackCenter: Po
   const pos = gridLayout(radii, origin);
 
   const nodes = rows.map((r, i) =>
-    createNode({ name: r.name, x: pos[i].x, y: pos[i].y, shape: { kind: 'circle', radiusFt: r.radiusFt }, categoryId: catId(r.category) }),
+    createNode({
+      name: r.name,
+      x: pos[i].x,
+      y: pos[i].y,
+      shape: { kind: 'circle', radiusFt: r.radiusFt },
+      categoryId: catId(r.category),
+    }),
   );
   return { nodes, categories: newCats };
 }

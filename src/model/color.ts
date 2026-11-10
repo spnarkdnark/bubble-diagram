@@ -2,14 +2,21 @@
 
 export function hexToRgb(hex: string): [number, number, number] {
   let h = hex.replace('#', '').trim();
-  if (h.length === 3) h = h.split('').map((c) => c + c).join('');
+  if (h.length === 3)
+    h = h
+      .split('')
+      .map((c) => c + c)
+      .join('');
   const n = parseInt(h.slice(0, 6), 16);
   if (Number.isNaN(n)) return [128, 128, 128];
   return [(n >> 16) & 255, (n >> 8) & 255, n & 255];
 }
 
 export function rgbToHex(r: number, g: number, b: number): string {
-  const c = (v: number) => Math.max(0, Math.min(255, Math.round(v))).toString(16).padStart(2, '0');
+  const c = (v: number) =>
+    Math.max(0, Math.min(255, Math.round(v)))
+      .toString(16)
+      .padStart(2, '0');
   return `#${c(r)}${c(g)}${c(b)}`;
 }
 

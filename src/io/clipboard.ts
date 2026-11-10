@@ -87,10 +87,15 @@ export function planPaste(project: Project, clip: ClipPayload, at: Point): Paste
     id: idMap.get(n.id)!,
     x: n.x + dx,
     y: n.y + dy,
-    categoryId: n.categoryId ? catMap.get(n.categoryId) ?? null : null,
+    categoryId: n.categoryId ? (catMap.get(n.categoryId) ?? null) : null,
     shape:
       n.shape.kind === 'blob'
-        ? { ...n.shape, points: n.shape.points.map((pt) => (pt.t === 'anchor' ? { ...pt, node: idMap.get(pt.node) ?? pt.node } : pt)) }
+        ? {
+            ...n.shape,
+            points: n.shape.points.map((pt) =>
+              pt.t === 'anchor' ? { ...pt, node: idMap.get(pt.node) ?? pt.node } : pt,
+            ),
+          }
         : n.shape,
   }));
   const connections = clip.connections
@@ -105,14 +110,19 @@ export function planPaste(project: Project, clip: ClipPayload, at: Point): Paste
 }
 
 /** The "look" of the first copied element: its category (mapped by name) and overrides. */
-export function clipStyle(project: Project, clip: ClipPayload): { categoryId: Id | null; style: StyleOverrides; newCategory?: Category } | null {
+export function clipStyle(
+  project: Project,
+  clip: ClipPayload,
+): { categoryId: Id | null; style: StyleOverrides; newCategory?: Category } | null {
   const n = clip.nodes[0];
   if (!n) return null;
   if (!n.categoryId) return { categoryId: null, style: { ...n.style } };
   const c = clip.categories.find((x) => x.id === n.categoryId);
   if (!c) return { categoryId: null, style: { ...n.style } };
   if (project.categories[c.id]?.name === c.name) return { categoryId: c.id, style: { ...n.style } };
-  const match = Object.values(project.categories).find((x) => x.name.trim().toLowerCase() === c.name.trim().toLowerCase());
+  const match = Object.values(project.categories).find(
+    (x) => x.name.trim().toLowerCase() === c.name.trim().toLowerCase(),
+  );
   if (match) return { categoryId: match.id, style: { ...n.style } };
   const nc = createCategory(c.name, c.style);
   return { categoryId: nc.id, style: { ...n.style }, newCategory: nc };

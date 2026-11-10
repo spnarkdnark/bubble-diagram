@@ -30,11 +30,20 @@ export interface SketchParams {
   fillOffset: number;
 }
 
-export const CLEAN: SketchParams = { wobble: 0, overshoot: 0, passes: 1, pressure: 0, fillStyle: 'flat', fillOffset: 0 };
+export const CLEAN: SketchParams = {
+  wobble: 0,
+  overshoot: 0,
+  passes: 1,
+  pressure: 0,
+  fillStyle: 'flat',
+  fillOffset: 0,
+};
 
 /** True when the params produce exact (non-sketched) geometry. */
 export function isClean(p: SketchParams): boolean {
-  return p.wobble <= 0 && p.overshoot <= 0 && p.passes <= 1 && p.pressure <= 0 && p.fillStyle === 'flat' && p.fillOffset <= 0;
+  return (
+    p.wobble <= 0 && p.overshoot <= 0 && p.passes <= 1 && p.pressure <= 0 && p.fillStyle === 'flat' && p.fillOffset <= 0
+  );
 }
 
 /** Scale the "hand" amounts of a param set (per-category sketch amount). */
@@ -285,7 +294,12 @@ function emitStroke(ops: Op[], pts: Pt[], opts: StrokeOpts, pressure: number, al
     if (pressure <= 0) {
       ops.push({ t: 'line', pts: piece, width: opts.width, color, alpha });
     } else {
-      ops.push({ t: 'poly', pts: strokeOutline(piece, widthProfile(piece.length, opts.width, pressure, r, true)), color, alpha });
+      ops.push({
+        t: 'poly',
+        pts: strokeOutline(piece, widthProfile(piece.length, opts.width, pressure, r, true)),
+        color,
+        alpha,
+      });
     }
   }
 }
@@ -336,7 +350,9 @@ export function sketchClosedStroke(pts: Pt[], stroke: StrokeOpts, o: SketchOpts)
     const ov = Math.max(-m.total * 0.03, Math.min(ovFrac * m.total, 26 * o.unitsPerPt * Math.max(P.overshoot, 0.2)));
     const run = m.total + ov;
     const drift =
-      (amp * 1.4 + stroke.width * 1.2 + 1.1 * o.unitsPerPt * P.overshoot) * (r() < 0.5 ? 1 : -1) * Math.min(1, P.overshoot + P.wobble);
+      (amp * 1.4 + stroke.width * 1.2 + 1.1 * o.unitsPerPt * P.overshoot) *
+      (r() < 0.5 ? 1 : -1) *
+      Math.min(1, P.overshoot + P.wobble);
     // the pen lifts off at the end of the stroke: a small outward flick
     const flick = P.overshoot * (1 + r() * 1.5) * o.unitsPerPt * (drift > 0 ? 1 : -1);
     const passJitter = k === 0 ? 0 : (r() - 0.5) * (amp + stroke.width * 1.5);
@@ -426,7 +442,11 @@ function hatchLines(
         while (s < b) {
           const len = (6 + r() * 18) * unitsPerPt;
           const e = Math.min(b, s + len);
-          if (r() > breakup * 0.3) lines.push([{ x: origin.x + d.x * s, y: origin.y + d.y * s }, { x: origin.x + d.x * e, y: origin.y + d.y * e }]);
+          if (r() > breakup * 0.3)
+            lines.push([
+              { x: origin.x + d.x * s, y: origin.y + d.y * s },
+              { x: origin.x + d.x * e, y: origin.y + d.y * e },
+            ]);
           s = e + r() * 2 * breakup * unitsPerPt;
         }
       } else {
@@ -458,7 +478,7 @@ export function sketchFill(pts: Pt[], o: SketchOpts): Op[] {
   const step = Math.max(m.total / 140, 1.5 * u);
   const r = rng(`${o.seed}:fill`);
   const offA = r() * Math.PI * 2;
-  const off = P.fillOffset * (1.5 + size / u * 0.02) * u;
+  const off = P.fillOffset * (1.5 + (size / u) * 0.02) * u;
   const shift = (poly: Pt[]) => poly.map((p) => ({ x: p.x + Math.cos(offA) * off, y: p.y + Math.sin(offA) * off }));
   const base = shift(noisyLoop(m, amp * 0.8, r, step));
   const ops: Op[] = [];
@@ -480,14 +500,17 @@ export function sketchFill(pts: Pt[], o: SketchOpts): Op[] {
     case 'hatch': {
       ops.push({ t: 'poly', pts: base, color: 'fill', alpha: 0.35 });
       const angle = ((38 + r() * 14) * Math.PI) / 180;
-      for (const l of hatchLines([base], angle, 3.2 * u, r, u, 0)) ops.push({ t: 'line', pts: l, width: 0.9 * u, color: 'fillDark', alpha: 0.75 });
+      for (const l of hatchLines([base], angle, 3.2 * u, r, u, 0))
+        ops.push({ t: 'line', pts: l, width: 0.9 * u, color: 'fillDark', alpha: 0.75 });
       break;
     }
     case 'pencil': {
       ops.push({ t: 'poly', pts: base, color: 'fill', alpha: 0.22 });
       const a1 = ((40 + r() * 10) * Math.PI) / 180;
-      for (const l of hatchLines([base], a1, 1.4 * u, r, u, 0.6)) ops.push({ t: 'line', pts: l, width: 0.45 * u, color: 'fill', alpha: 0.85 });
-      for (const l of hatchLines([base], a1 + 0.22, 2.2 * u, r, u, 0.8)) ops.push({ t: 'line', pts: l, width: 0.35 * u, color: 'fillDark', alpha: 0.35 });
+      for (const l of hatchLines([base], a1, 1.4 * u, r, u, 0.6))
+        ops.push({ t: 'line', pts: l, width: 0.45 * u, color: 'fill', alpha: 0.85 });
+      for (const l of hatchLines([base], a1 + 0.22, 2.2 * u, r, u, 0.8))
+        ops.push({ t: 'line', pts: l, width: 0.35 * u, color: 'fillDark', alpha: 0.35 });
       break;
     }
   }
@@ -495,7 +518,14 @@ export function sketchFill(pts: Pt[], o: SketchOpts): Op[] {
 }
 
 /** Hatch a region with straight lines (used for overlap "shared zone" fills). */
-export function hatchRegion(pts: Pt[], angleDeg: number, spacing: number, width: number, seed: string, unitsPerPt: number): Op[] {
+export function hatchRegion(
+  pts: Pt[],
+  angleDeg: number,
+  spacing: number,
+  width: number,
+  seed: string,
+  unitsPerPt: number,
+): Op[] {
   const r = rng(seed);
   return hatchLines([pts], (angleDeg * Math.PI) / 180, spacing, r, unitsPerPt, 0).map((l) => ({
     t: 'line' as const,

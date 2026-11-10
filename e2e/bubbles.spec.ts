@@ -75,7 +75,7 @@ test('connect tool links two bubbles; connection type can change', async ({ page
   expect(conns).toHaveLength(1);
   await canvas.click(500, 300); // the line between them
   await page.getByRole('button', { name: /Strong adjacency/ }).click();
-  expect(((Object.values((await doc(page)).connections) as any[])[0]).type).toBe('strong');
+  expect((Object.values((await doc(page)).connections) as any[])[0].type).toBe('strong');
 });
 
 test('size by radius, diameter or area', async ({ page, canvas }) => {

@@ -26,11 +26,13 @@ function fullStyle(raw: any, base: StyleProps = DEFAULT_STYLE): StyleProps {
 }
 
 function cleanShape(raw: any): Shape | null {
-  if (raw?.kind === 'circle') return typeof raw.radiusFt === 'number' && raw.radiusFt > 0 ? { kind: 'circle', radiusFt: raw.radiusFt } : null;
+  if (raw?.kind === 'circle')
+    return typeof raw.radiusFt === 'number' && raw.radiusFt > 0 ? { kind: 'circle', radiusFt: raw.radiusFt } : null;
   if (raw?.kind === 'blob' && Array.isArray(raw.points)) {
     const points: BlobPoint[] = [];
     for (const p of raw.points) {
-      if (p?.t === 'free' && typeof p.x === 'number' && typeof p.y === 'number') points.push({ t: 'free', x: p.x, y: p.y });
+      if (p?.t === 'free' && typeof p.x === 'number' && typeof p.y === 'number')
+        points.push({ t: 'free', x: p.x, y: p.y });
       else if (p?.t === 'anchor' && typeof p.node === 'string' && typeof p.angle === 'number')
         points.push({ t: 'anchor', node: p.node, angle: p.angle, dir: p.dir === -1 ? -1 : 1, arc: !!p.arc });
     }
@@ -54,7 +56,8 @@ function upgradeV1(p: any): any {
     if (st.fill) o.fill = st.fill;
     if (st.stroke) o.stroke = st.stroke;
     if (st.fillOpacity !== undefined && st.fillOpacity !== V1_STYLE.fillOpacity) o.fillOpacity = st.fillOpacity;
-    if (st.strokeWeightPt !== undefined && st.strokeWeightPt !== V1_STYLE.strokeWeightPt) o.strokeWeightPt = st.strokeWeightPt;
+    if (st.strokeWeightPt !== undefined && st.strokeWeightPt !== V1_STYLE.strokeWeightPt)
+      o.strokeWeightPt = st.strokeWeightPt;
     if (st.strokeStyle && st.strokeStyle !== V1_STYLE.strokeStyle) o.strokeStyle = st.strokeStyle;
     if (lb.fontSizePt !== undefined && lb.fontSizePt !== V1_LABEL.fontSizePt) o.labelSizePt = lb.fontSizePt;
     if (lb.secondary && lb.secondary !== V1_LABEL.secondary) o.labelSecondary = lb.secondary;

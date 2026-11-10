@@ -63,7 +63,10 @@ export function field(page: Page, label: string) {
 
 export async function importSampleCsv(page: Page) {
   await page.getByRole('button', { name: 'File ▾' }).click();
-  const [chooser] = await Promise.all([page.waitForEvent('filechooser'), page.getByRole('menuitem', { name: /Import CSV/ }).click()]);
+  const [chooser] = await Promise.all([
+    page.waitForEvent('filechooser'),
+    page.getByRole('menuitem', { name: /Import CSV/ }).click(),
+  ]);
   await chooser.setFiles('examples/sample-program.csv');
   await expect(page.locator('.toast')).toContainText('Imported 11');
 }

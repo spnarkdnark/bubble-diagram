@@ -54,9 +54,7 @@ export function snap(value: number, inc: number): number {
 /** Next increment up/down from value, landing on the increment grid. */
 export function stepToIncrement(value: number, inc: number, dir: 1 | -1): number {
   const eps = 1e-9;
-  return dir > 0
-    ? Math.floor(value / inc + eps) * inc + inc
-    : Math.ceil(value / inc - eps) * inc - inc;
+  return dir > 0 ? Math.floor(value / inc + eps) * inc + inc : Math.ceil(value / inc - eps) * inc - inc;
 }
 
 /** 12.5 -> 12'-6"  ;  0.5 -> 0'-6"  ; rounds to nearest inch. */
@@ -106,7 +104,11 @@ export function parseLength(input: string | number): number | null {
 /** Parse an area string like "1,200", "1200 sf", "1200sf". */
 export function parseArea(input: string | number): number | null {
   if (typeof input === 'number') return Number.isFinite(input) ? input : null;
-  const s = input.trim().toLowerCase().replace(/,/g, '').replace(/\s*(sf|sq\.?\s*ft\.?|ft2|ft²)$/, '');
+  const s = input
+    .trim()
+    .toLowerCase()
+    .replace(/,/g, '')
+    .replace(/\s*(sf|sq\.?\s*ft\.?|ft2|ft²)$/, '');
   if (!/^\d*\.?\d+$/.test(s)) return null;
   return parseFloat(s);
 }

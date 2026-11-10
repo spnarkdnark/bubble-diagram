@@ -9,7 +9,10 @@ describe('project file', () => {
     const a = createNode({ name: 'A', x: 1, y: 2 });
     const b = createNode({ name: 'B', x: 30, y: 2, categoryId: p.categoryOrder[0] });
     const c = createConnection(a.id, b.id, 'strong');
-    p.nodes[a.id] = a; p.nodes[b.id] = b; p.nodeOrder.push(a.id, b.id); p.connections[c.id] = c;
+    p.nodes[a.id] = a;
+    p.nodes[b.id] = b;
+    p.nodeOrder.push(a.id, b.id);
+    p.connections[c.id] = c;
     const back = parseProject(serializeProject(p));
     expect(back.nodes).toEqual(p.nodes);
     expect(back.connections).toEqual(p.connections);
@@ -37,12 +40,26 @@ describe('v1 migration', () => {
       categories: { c1: { id: 'c1', name: 'Public', color: '#112233' } },
       categoryOrder: ['c1'],
       nodes: {
-        a: { id: 'a', name: 'A', x: 0, y: 0, shape: { kind: 'circle', radiusFt: 5 }, categoryId: 'c1',
-             style: { fill: null, fillOpacity: 0.85, stroke: null, strokeWeightPt: 2, strokeStyle: 'solid' },
-             label: { fontSizePt: 9, secondary: 'radius' } },
-        b: { id: 'b', name: 'B', x: 30, y: 0, shape: { kind: 'circle', radiusFt: 5 }, categoryId: 'c1',
-             style: { fill: '#ff0000', fillOpacity: 0.85, stroke: null, strokeWeightPt: 0.75, strokeStyle: 'solid' },
-             label: { fontSizePt: 9, secondary: 'area' } },
+        a: {
+          id: 'a',
+          name: 'A',
+          x: 0,
+          y: 0,
+          shape: { kind: 'circle', radiusFt: 5 },
+          categoryId: 'c1',
+          style: { fill: null, fillOpacity: 0.85, stroke: null, strokeWeightPt: 2, strokeStyle: 'solid' },
+          label: { fontSizePt: 9, secondary: 'radius' },
+        },
+        b: {
+          id: 'b',
+          name: 'B',
+          x: 30,
+          y: 0,
+          shape: { kind: 'circle', radiusFt: 5 },
+          categoryId: 'c1',
+          style: { fill: '#ff0000', fillOpacity: 0.85, stroke: null, strokeWeightPt: 0.75, strokeStyle: 'solid' },
+          label: { fontSizePt: 9, secondary: 'area' },
+        },
       },
       nodeOrder: ['a', 'b'],
       connections: {},
