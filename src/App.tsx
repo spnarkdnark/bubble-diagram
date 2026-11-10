@@ -6,10 +6,15 @@ import { ScaleBar } from './ui/ScaleBar';
 import { Toast } from './ui/Toast';
 import { useKeyboardShortcuts } from './hooks/useKeyboardShortcuts';
 import { installSelectionPruning } from './store/actions';
+import { installAutosave } from './io/autosave';
+import { openProject, saveProject } from './io/fileActions';
+
+const shortcutHandlers = { save: saveProject, open: openProject };
 
 export function App() {
   useEffect(() => installSelectionPruning(), []);
-  useKeyboardShortcuts();
+  useEffect(() => installAutosave(), []);
+  useKeyboardShortcuts(shortcutHandlers);
   return (
     <div className="app">
       <Toolbar />
