@@ -4,7 +4,8 @@
  * take the project because blob geometry depends on the bubbles it hugs.
  */
 import type { Bounds, BubbleNode, Point, Project, Shape } from './types';
-import { blobGeometry, pointInPolygon } from './blob';
+import { blobGeometry } from './blob';
+import { pointInPolygon } from './polygon';
 
 export function radiusFromArea(areaSf: number): number {
   return Math.sqrt(Math.max(0, areaSf) / Math.PI);
