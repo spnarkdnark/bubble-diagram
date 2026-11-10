@@ -4,3 +4,5 @@ dist
 .DS_Store
 *.zip
 *.bundle
+test-results
+playwright-report
