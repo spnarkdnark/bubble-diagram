@@ -74,6 +74,12 @@ export function formatLengthShort(ft: number): string {
   return inches % 12 === 0 ? `${(ft < 0 ? -1 : 1) * (inches / 12)}'` : formatFeetInches(ft);
 }
 
+/** Like formatLengthShort but lengths under a foot show as inches: 6" */
+export function formatLengthCompact(ft: number): string {
+  const inches = Math.round(Math.abs(ft) * 12);
+  return inches < 12 ? `${inches}"` : formatLengthShort(ft);
+}
+
 export function formatArea(sf: number): string {
   return `${Math.round(sf).toLocaleString('en-US')} sf`;
 }

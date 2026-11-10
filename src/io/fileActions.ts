@@ -2,7 +2,9 @@
 import { createProject } from '../model/factory';
 import { getDoc, useDocument } from '../store/documentStore';
 import { useUi } from '../store/uiStore';
-import { zoomToFit } from '../store/actions';
+import { selectNodes, viewCenterWorld, zoomToFit } from '../store/actions';
+import { pickFile } from './download';
+import { buildImport, parseCsv } from './csvImport';
 import { openProjectFile, saveProjectFile } from './projectFile';
 
 const toast = (m: string) => useUi.getState().showToast(m);
@@ -33,9 +35,6 @@ export function saveProject() {
 }
 
 export async function importCsv() {
-  const { pickFile } = await import('./download');
-  const { parseCsv, buildImport } = await import('./csvImport');
-  const { viewCenterWorld, selectNodes } = await import('../store/actions');
   const file = await pickFile('.csv,text/csv');
   if (!file) return;
   const { rows, errors } = parseCsv(await file.text());

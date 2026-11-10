@@ -1,7 +1,7 @@
 import { useDoc } from '../../store/documentStore';
 import * as A from '../../store/actions';
 import { totalArea } from '../../model/selectors';
-import { formatArea, formatFeetInches } from '../../model/units';
+import { formatArea, formatLengthCompact } from '../../model/units';
 import { Field, ReadOnly, Section, SelectField, TextField } from '../controls/Controls';
 
 const SNAP_OPTIONS = [
@@ -39,7 +39,7 @@ export function DrawingPanel() {
       <Section title="Shortcuts">
         <dl className="shortcuts">
           <dt>V / B / C</dt><dd>Select / Bubble / Connect</dd>
-          <dt>Scroll</dt><dd>Zoom (over selected bubble: resize {formatFeetInches(doc.settings.snap.radiusIncrementFt)})</dd>
+          <dt>Scroll</dt><dd>Zoom (over selected bubble: resize {formatLengthCompact(doc.settings.snap.radiusIncrementFt)})</dd>
           <dt>Space + drag</dt><dd>Pan (or middle mouse)</dd>
           <dt>Shift + click</dt><dd>Add to selection</dd>
           <dt>Arrows</dt><dd>Nudge 1′ (Shift 10′)</dd>

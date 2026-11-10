@@ -165,6 +165,9 @@ export function CanvasStage() {
             if (Math.hypot(e.clientX - it.sx, e.clientY - it.sy) < DRAG_THRESHOLD_PX) return;
             it.moved = true;
             useDocument.getState().beginGesture();
+          } else if (!useDocument.getState().gestureBase) {
+            interaction.current = { kind: 'none' }; // cancelled with Esc
+            return;
           }
           const dx = p.x - it.start.x;
           const dy = p.y - it.start.y;
@@ -179,7 +182,11 @@ export function CanvasStage() {
         }
         case 'resize': {
           const n = getDoc().nodes[it.id];
-          if (!n) return;
+          if (!n || !useDocument.getState().gestureBase) {
+            interaction.current = { kind: 'none' };
+            ui.setReadout(null);
+            return;
+          }
           let r = Math.hypot(p.x - n.x, p.y - n.y);
           if (!e.shiftKey) r = snap(r, getDoc().settings.snap.radiusIncrementFt);
           r = Math.max(MIN_RADIUS_FT, r);

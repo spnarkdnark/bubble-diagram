@@ -4,7 +4,7 @@ import * as A from '../../store/actions';
 import { resolveFill, resolveStroke, totalArea } from '../../model/selectors';
 import { shapeArea, shapeSize } from '../../model/geometry';
 import { MIN_RADIUS_FT } from '../../model/defaults';
-import { formatArea, formatFeetInches, parseLength } from '../../model/units';
+import { formatArea, formatFeetInches, formatLengthCompact, parseLength } from '../../model/units';
 import { Checkbox, ColorField, common, Field, NumberField, ReadOnly, Section, SelectField, Slider, TextField } from '../controls/Controls';
 
 const fmtPt = (v: number) => `${+v.toFixed(2)} pt`;
@@ -157,7 +157,9 @@ export function BubbleProps({ ids }: { ids: Id[] }) {
         <button className="btn" onClick={() => A.bringToFront(ids)}>To front</button>
         <button className="btn danger" onClick={A.deleteSelection}>Delete</button>
       </div>
-      <p className="tip">Tip: scroll over a selected bubble to resize ±6" (Shift: ±1").</p>
+      <p className="tip">
+        Tip: scroll over a selected bubble to resize ±{formatLengthCompact(doc.settings.snap.radiusIncrementFt)} (Shift: ±1").
+      </p>
     </>
   );
 }

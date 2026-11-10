@@ -30,7 +30,8 @@ src/store/    history.ts (pure undo stack), documentStore (undoable Project),
 src/canvas/   CanvasStage (events, tools, zoom/pan), layers/, shapes/, textLayout
 src/ui/       Toolbar, ScaleBar, panels/ (properties, categories, settings),
               controls/ (shared inputs), ExportDialog, Toast
-src/io/       projectFile (JSON), autosave (localStorage), csvImport, autoLayout,
+src/io/       fileActions (New/Open/Save/Import CSV commands), projectFile (JSON),
+              autosave (localStorage), csvImport, autoLayout, download helpers,
               export/ (svg.ts is the single exporter; png/pdf build on it)
 src/hooks/    useKeyboardShortcuts
 tests/        Vitest
@@ -66,12 +67,26 @@ tests/        Vitest
 - Shortcuts: Del, ⌘/Ctrl+D, ⌘/Ctrl+A, arrows (1', Shift 10'), ⌘/Ctrl+Z / Shift+Z / Y,
   ⌘/Ctrl+S save, F zoom to fit, ⌘/Ctrl+0 100% (true paper size).
 
+## CSV import
+Columns (case-insensitive, aliases in `csvImport.ts`): `name`, `radius`, `category`,
+optional `area`. Radius accepts `12.5`, `12'`, `12'-6"`; area accepts `1200`, `1,200 sf`.
+Radius wins if both are given; otherwise radius = sqrt(area/π). Unknown categories are
+created with the next palette color. Imported bubbles go in a loose grid below existing
+content (`autoLayout.ts`). Sample: `examples/sample-program.csv`.
+
 ## Export
 - `io/export/svg.ts` builds SVG from the data model in paper points at true scale
   (independent of zoom). PDF = svg2pdf.js onto a jsPDF page (fit-to-drawing or a
   standard sheet, centered, warns if too big). PNG = SVG rasterized at chosen DPI.
 - Label line-wrapping is shared by canvas and export (`canvas/textLayout.ts`) so
   they match.
+
+## Testing notes
+- Unit tests cover units, geometry, history, project file round-trip, CSV.
+- Canvas hit-testing is geometric (`canvas/hitTest.ts`); Konva layers are
+  `listening={false}`. Pointer handling lives in `CanvasStage.tsx` (window-level
+  move/up so drags continue outside the canvas).
+- jsPDF/svg2pdf are lazy-loaded on first PDF export.
 
 ## Out of scope for v1 (hooks left in place)
 - Ellipses / rounded rectangles: `Shape` union + geometry.ts switches.
