@@ -12,6 +12,10 @@ react-konva canvas, Zustand + Immer state. No UI framework; plain CSS with token
 - `npm run lint` (ESLint) / `npm run format` (Prettier) / `npm run typecheck` / `npm run build`
 - Before committing: typecheck, lint, format:check, `npm test`, `npm run e2e` all pass.
 - TypeScript is pinned to 5.9 (typescript-eslint does not support TS 7 yet).
+- Deploy: `.github/workflows/deploy.yml` builds and publishes `dist/` to GitHub Pages on
+  every push to main (repo Settings → Pages → Source must be "GitHub Actions"). The build
+  uses `BASE_PATH=/<repo>/` (vite `base`); runtime asset URLs must go through Vite imports
+  (e.g. `?url`), never hard-coded absolute paths, or they break under the sub-path.
 
 ## Conventions
 
