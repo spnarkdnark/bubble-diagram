@@ -15,6 +15,8 @@ import { handlePosition, hitTest, topNodeAt } from './hitTest';
 import { pointer } from './pointer';
 import { loadWebFont } from '../render/fonts';
 import { PAPER_COLORS, paperTileUrl } from '../render/paper';
+import { blobFromClicks, blobFromStroke, blobGeometry, circleRings, movePoint, snapToRing, toBlobShape } from '../model/blob';
+import type { BubbleNode } from '../model/types';
 
 const ACCENT = '#2f7de1';
 const HIT_TOL_PX = 7;
@@ -27,11 +29,41 @@ type Interaction =
   | { kind: 'move'; sx: number; sy: number; start: Point; origins: Map<Id, Point>; moved: boolean; clicked: Id }
   | { kind: 'resize'; id: Id }
   | { kind: 'marquee'; start: Point; additive: boolean }
-  | { kind: 'connect'; from: Id };
+  | { kind: 'connect'; from: Id }
+  | { kind: 'draw'; pts: Point[]; sx: number; sy: number; lx: number; ly: number; len: number }
+  | { kind: 'blobPoint'; id: Id; index: number; moved: boolean };
+
+type SnapHint = { x: number; y: number; R: number; at: Point } | null;
+
+/** Single selected blob (select tool) whose control points are editable. */
+function blobHandleTarget(): Id | null {
+  const ui = useUi.getState();
+  if (ui.tool !== 'select' || ui.selection.nodes.length !== 1) return null;
+  const n = getDoc().nodes[ui.selection.nodes[0]];
+  return n?.shape.kind === 'blob' ? n.id : null;
+}
 
 function paperStyle(paper: Parameters<typeof paperTileUrl>[0]): React.CSSProperties {
   const url = paperTileUrl(paper);
   return { backgroundColor: PAPER_COLORS[paper], backgroundImage: url ? `url(${url})` : undefined };
+}
+
+function flat(pts: Point[]): number[] {
+  const out: number[] = [];
+  for (const p of pts) out.push(p.x, p.y);
+  return out;
+}
+
+/** Live outline of the click-drawn shape so far (including the cursor position). */
+function draftOutline(draft: Point[], cursor: Point | null): Point[] {
+  const pts = cursor ? [...draft, cursor] : draft;
+  if (pts.length < 3) return pts;
+  const doc = getDoc();
+  const k = currentK();
+  const rings = circleRings(doc);
+  const { shape, origin } = toBlobShape(blobFromClicks(pts, rings, doc.settings.shapeGapFt, A.SNAP_PX / k), doc.settings.shapeGapFt, rings);
+  const temp = { id: '__draft', name: '', x: origin.x, y: origin.y, shape, categoryId: null, style: {} } as BubbleNode;
+  return blobGeometry(temp, doc).poly;
 }
 
 /** Stage scale (px per ft) from fresh store state. */
@@ -50,6 +82,9 @@ export function CanvasStage() {
 
   const [marquee, setMarquee] = useState<Bounds | null>(null);
   const [pointerWorld, setPointerWorld] = useState<Point | null>(null);
+  const [drawPreview, setDrawPreview] = useState<Point[] | null>(null);
+  const [snapHint, setSnapHint] = useState<SnapHint>(null);
+  const shapeDraft = useUi((s) => s.shapeDraft);
   const interaction = useRef<Interaction>({ kind: 'none' });
   const sceneRef = useRef<ReturnType<typeof buildScene> | null>(null);
   const wheelAcc = useRef(0);
@@ -62,7 +97,9 @@ export function CanvasStage() {
   const fontEpoch = useUi((s) => s.fontEpoch);
   const scene = useMemo(() => buildScene(doc), [doc, fontEpoch]);
   sceneRef.current = scene;
-  const handleFor = tool === 'select' && selection.nodes.length === 1 ? selection.nodes[0] : null;
+  const handleFor =
+    tool === 'select' && selection.nodes.length === 1 && doc.nodes[selection.nodes[0]]?.shape.kind === 'circle' ? selection.nodes[0] : null;
+  const blobTarget = tool === 'select' && selection.nodes.length === 1 && doc.nodes[selection.nodes[0]]?.shape.kind === 'blob' ? selection.nodes[0] : null;
 
   // ---- hand fonts: re-measure labels once the web font is ready ----
   const labelFont = doc.settings.graphic.labelFont;
@@ -102,7 +139,9 @@ export function CanvasStage() {
   };
   const currentHandleFor = () => {
     const ui = useUi.getState();
-    return ui.tool === 'select' && ui.selection.nodes.length === 1 ? ui.selection.nodes[0] : null;
+    if (ui.tool !== 'select' || ui.selection.nodes.length !== 1) return null;
+    const id = ui.selection.nodes[0];
+    return getDoc().nodes[id]?.shape.kind === 'circle' ? id : null;
   };
   /** overlap markers currently shown (either bubble or the overlap itself selected) */
   const visibleMarkers = () => {
@@ -112,6 +151,29 @@ export function CanvasStage() {
     );
   };
   const hitAt = (p: Point) => hitTest(getDoc(), p, HIT_TOL_PX / currentK(), currentHandleFor(), visibleMarkers());
+  /** control point of the selected blob under the cursor */
+  const blobPointAt = (p: Point): { id: Id; index: number } | null => {
+    const id = blobHandleTarget();
+    if (!id) return null;
+    const ctrl = blobGeometry(getDoc().nodes[id], getDoc()).ctrl;
+    const tol = (HIT_TOL_PX * 1.2) / currentK();
+    for (let i = 0; i < ctrl.length; i++) if (Math.hypot(p.x - ctrl[i].x, p.y - ctrl[i].y) <= tol) return { id, index: i };
+    return null;
+  };
+  const snapAt = (p: Point, exclude?: Id) => {
+    const doc = getDoc();
+    const gap = exclude && doc.nodes[exclude]?.shape.kind === 'blob' ? (doc.nodes[exclude].shape as any).gapFt : doc.settings.shapeGapFt;
+    return { snap: snapToRing(p, circleRings(doc), gap, A.SNAP_PX / currentK()), gap };
+  };
+  const hintFor = (snap: ReturnType<typeof snapToRing>, gap: number): SnapHint =>
+    snap
+      ? {
+          x: snap.ring.x,
+          y: snap.ring.y,
+          R: snap.ring.r + gap,
+          at: { x: snap.ring.x + Math.cos(snap.angle) * (snap.ring.r + gap), y: snap.ring.y + Math.sin(snap.angle) * (snap.ring.r + gap) },
+        }
+      : null;
 
   // ---- mouse down ----
   const onMouseDown = (e: React.MouseEvent) => {
@@ -126,6 +188,19 @@ export function CanvasStage() {
     const doc = getDoc();
     const p = toWorld(e.clientX, e.clientY);
     const hit = hitAt(p);
+
+    if (ui.tool === 'shape') {
+      interaction.current = { kind: 'draw', pts: [p], sx: e.clientX, sy: e.clientY, lx: e.clientX, ly: e.clientY, len: 0 };
+      return;
+    }
+
+    if (ui.tool === 'select') {
+      const bp = blobPointAt(p);
+      if (bp) {
+        interaction.current = { kind: 'blobPoint', id: bp.id, index: bp.index, moved: false };
+        return;
+      }
+    }
 
     if (ui.tool === 'bubble') {
       A.addNode(p);
@@ -233,6 +308,37 @@ export function CanvasStage() {
           ui.setReadout({ text: `R ${formatFeetInches(r)}`, at: { x: n.x + r, y: n.y } });
           return;
         }
+        case 'draw': {
+          const step = Math.hypot(e.clientX - it.lx, e.clientY - it.ly);
+          if (step < 2) return;
+          it.len += step;
+          it.lx = e.clientX;
+          it.ly = e.clientY;
+          it.pts.push(p);
+          if (it.len > 6) setDrawPreview(it.pts.slice());
+          const { snap, gap } = snapAt(p);
+          setSnapHint(hintFor(snap, gap));
+          return;
+        }
+        case 'blobPoint': {
+          const node = getDoc().nodes[it.id];
+          if (!node || node.shape.kind !== 'blob') return;
+          if (!it.moved) {
+            it.moved = true;
+            useDocument.getState().beginGesture();
+          } else if (!useDocument.getState().gestureBase) {
+            interaction.current = { kind: 'none' };
+            setSnapHint(null);
+            return;
+          }
+          const { snap, gap } = e.altKey ? { snap: null, gap: 0 } : snapAt(p, it.id);
+          setSnapHint(hintFor(snap, gap));
+          const shape = movePoint(node, it.index, p, snap);
+          useDocument.getState().preview((d) => {
+            d.nodes[it.id].shape = shape;
+          });
+          return;
+        }
         case 'marquee':
           setMarquee({
             minX: Math.min(it.start.x, p.x),
@@ -242,7 +348,11 @@ export function CanvasStage() {
           });
           return;
       }
-      if (ui.tool === 'connect' && ui.connectFrom) setPointerWorld(p);
+      if ((ui.tool === 'connect' && ui.connectFrom) || ui.tool === 'shape') setPointerWorld(p);
+      if (ui.tool === 'shape') {
+        const { snap, gap } = snapAt(p);
+        setSnapHint(hintFor(snap, gap));
+      }
       updateCursor(e);
     };
 
@@ -259,6 +369,29 @@ export function CanvasStage() {
           useDocument.getState().endGesture();
           ui.setReadout(null);
           break;
+        case 'blobPoint':
+          if (it.moved) useDocument.getState().endGesture();
+          setSnapHint(null);
+          break;
+        case 'draw': {
+          setDrawPreview(null);
+          const doc = getDoc();
+          const kk = currentK();
+          if (it.len < 6) {
+            // a click: add a point to the draft, or close it on the first point
+            const draft = ui.shapeDraft ?? [];
+            const first = draft[0];
+            if (first && draft.length >= 3 && Math.hypot(first.x - it.pts[0].x, first.y - it.pts[0].y) * kk < 10) A.finishShapeDraft();
+            else ui.setShapeDraft([...draft, it.pts[0]]);
+            break;
+          }
+          // freehand stroke
+          ui.setShapeDraft(null);
+          const pts = blobFromStroke(it.pts, circleRings(doc), doc.settings.shapeGapFt, A.SNAP_PX / kk, 4 / kk);
+          if (A.createBlob(pts)) ui.setTool('select');
+          setSnapHint(null);
+          break;
+        }
         case 'marquee': {
           setMarquee(null);
           const p = toWorld(e.clientX, e.clientY);
@@ -294,6 +427,45 @@ export function CanvasStage() {
     };
   }, []);
 
+  // ---- double click: finish a shape, fill a pocket, edit blob points ----
+  const onDoubleClick = (e: React.MouseEvent) => {
+    const ui = useUi.getState();
+    const p = toWorld(e.clientX, e.clientY);
+    const kk = currentK();
+    if (ui.tool === 'shape') {
+      const draft = ui.shapeDraft ?? [];
+      // the two clicks of the double-click each added a point: drop them
+      const near = (q: Point) => Math.hypot(q.x - p.x, q.y - p.y) * kk < 8;
+      const kept = draft.filter((q, i) => !(i >= draft.length - 2 && near(q)));
+      if (kept.length >= 3) {
+        ui.setShapeDraft(kept);
+        A.finishShapeDraft();
+        ui.setTool('select');
+      } else if (kept.length === 0) {
+        ui.setShapeDraft(null);
+        if (A.fillPocket(p)) ui.setTool('select');
+      } else ui.setShapeDraft(kept);
+      return;
+    }
+    const target = blobHandleTarget();
+    if (ui.tool === 'select' && target) {
+      const bp = blobPointAt(p);
+      if (bp) return A.deleteBlobPoint(bp.id, bp.index);
+      // on the edge: insert a point
+      const geo = blobGeometry(getDoc().nodes[target], getDoc());
+      let best = -1;
+      let bd = Infinity;
+      geo.poly.forEach((q, i) => {
+        const d = Math.hypot(q.x - p.x, q.y - p.y);
+        if (d < bd) {
+          bd = d;
+          best = i;
+        }
+      });
+      if (best >= 0 && bd * kk < 10) A.insertBlobPoint(target, geo.seg[best], p);
+    }
+  };
+
   // ---- cursor feedback ----
   const updateCursor = (e: MouseEvent) => {
     const el = containerRef.current;
@@ -301,9 +473,12 @@ export function CanvasStage() {
     const ui = useUi.getState();
     if (ui.spaceDown) return void (el.style.cursor = 'grab');
     if (ui.tool === 'bubble') return void (el.style.cursor = 'copy');
+    if (ui.tool === 'shape') return void (el.style.cursor = 'crosshair');
     const r = el.getBoundingClientRect();
     if (e.clientX < r.left || e.clientX > r.right || e.clientY < r.top || e.clientY > r.bottom) return;
-    const hit = hitAt(toWorld(e.clientX, e.clientY));
+    const wp = toWorld(e.clientX, e.clientY);
+    if (blobPointAt(wp)) return void (el.style.cursor = 'grab');
+    const hit = hitAt(wp);
     el.style.cursor =
       ui.tool === 'connect'
         ? hit.kind === 'node' ? 'crosshair' : 'default'
@@ -332,7 +507,7 @@ export function CanvasStage() {
       const ui = useUi.getState();
       const doc = getDoc();
       const over = topNodeAt(doc, toWorld(e.clientX, e.clientY));
-      if (over && ui.tool === 'select' && ui.selection.nodes.includes(over)) {
+      if (over && ui.tool === 'select' && ui.selection.nodes.includes(over) && doc.nodes[over].shape.kind === 'circle') {
         // discrete mouse wheels step once per notch; trackpads accumulate
         let dir: 1 | -1 | 0 = 0;
         if (Math.abs(delta) >= WHEEL_STEP_THRESHOLD) {
@@ -347,7 +522,7 @@ export function CanvasStage() {
         }
         if (!dir) return;
         const inc = e.shiftKey ? 1 / 12 : doc.settings.snap.radiusIncrementFt;
-        A.stepRadius(ui.selection.nodes, dir, inc);
+        A.stepRadius(ui.selection.nodes.filter((id) => doc.nodes[id]?.shape.kind === 'circle'), dir, inc);
         const n = getDoc().nodes[over];
         const r = shapeSize(n.shape);
         ui.setReadout({ text: `R ${formatFeetInches(r)}`, at: { x: n.x + r, y: n.y } });
@@ -373,6 +548,7 @@ export function CanvasStage() {
       style={paperStyle(doc.settings.graphic.paper)}
       onMouseDown={onMouseDown}
       onContextMenu={(e) => e.preventDefault()}
+      onDoubleClick={onDoubleClick}
       onMouseLeave={() => {
         setPointerWorld(null);
         pointer.inside = false;
@@ -431,7 +607,12 @@ export function CanvasStage() {
               />
             ))}
           {nodes
-            .filter((n) => selectedNodes.has(n.id) || n.id === connectFrom)
+            .filter((n) => n.shape.kind === 'blob' && (selectedNodes.has(n.id) || n.id === connectFrom))
+            .map((n) => (
+              <Line key={n.id} points={flat(blobGeometry(n, doc).poly)} closed stroke={ACCENT} strokeWidth={1.5 / k} dash={n.id === connectFrom ? [4 / k, 3 / k] : undefined} />
+            ))}
+          {nodes
+            .filter((n) => n.shape.kind === 'circle' && (selectedNodes.has(n.id) || n.id === connectFrom))
             .map((n) => (
               <Circle
                 key={n.id}
@@ -455,9 +636,39 @@ export function CanvasStage() {
             />
           )}
           {fromNode && pointerWorld && (() => {
-            const p = boundaryPoint(fromNode, pointerWorld);
+            const p = boundaryPoint(fromNode, pointerWorld, doc);
             return <Line points={[p.x, p.y, pointerWorld.x, pointerWorld.y]} stroke={ACCENT} strokeWidth={1.5 / k} dash={[6 / k, 4 / k]} />;
           })()}
+          {blobTarget &&
+            blobGeometry(doc.nodes[blobTarget], doc).ctrl.map((c, i) => {
+              const pt = (doc.nodes[blobTarget].shape as any).points[i];
+              return (
+                <Circle
+                  key={i}
+                  x={c.x}
+                  y={c.y}
+                  radius={4.5 / k}
+                  fill={pt?.t === 'anchor' ? ACCENT : '#fff'}
+                  stroke={ACCENT}
+                  strokeWidth={1.5 / k}
+                />
+              );
+            })}
+          {snapHint && (
+            <>
+              <Circle x={snapHint.x} y={snapHint.y} radius={snapHint.R} stroke={ACCENT} strokeWidth={1 / k} dash={[5 / k, 4 / k]} opacity={0.8} />
+              <Circle x={snapHint.at.x} y={snapHint.at.y} radius={3.5 / k} fill={ACCENT} />
+            </>
+          )}
+          {drawPreview && <Line points={flat(drawPreview)} stroke="#3a3a3a" strokeWidth={1.4 / k} lineCap="round" lineJoin="round" opacity={0.85} />}
+          {shapeDraft && shapeDraft.length > 0 && (
+            <>
+              <Line points={flat(draftOutline(shapeDraft, pointerWorld))} closed stroke={ACCENT} strokeWidth={1.5 / k} fill="rgba(47,125,225,0.06)" />
+              {shapeDraft.map((q, i) => (
+                <Circle key={i} x={q.x} y={q.y} radius={(i === 0 ? 5 : 3.5) / k} fill={i === 0 ? '#fff' : ACCENT} stroke={ACCENT} strokeWidth={1.5 / k} />
+              ))}
+            </>
+          )}
           {marquee && (
             <Rect
               x={marquee.minX}
@@ -477,6 +688,13 @@ export function CanvasStage() {
           )}
         </Layer>
       </Stage>
+      {tool === 'shape' && (
+        <div className="canvas-tip">
+          {shapeDraft?.length
+            ? 'Click to add points · click the first point, double-click or press Enter to close · Backspace removes the last point · Esc cancels'
+            : 'Drag to draw a shape freehand, or click to place points. Edges near a bubble snap to it. Double-click in a gap between bubbles to fill it.'}
+        </div>
+      )}
       {nodes.length === 0 && (
         <div className="canvas-hint">
           Press <kbd>B</kbd> and click to place a bubble, or import a CSV.

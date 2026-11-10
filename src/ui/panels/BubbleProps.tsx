@@ -14,7 +14,9 @@ export function BubbleProps({ ids }: { ids: Id[] }) {
   if (nodes.length === 0) return null;
   const single = nodes.length === 1;
   const resolved = nodes.map((n) => resolveStyle(n, doc));
-  const radius = common(nodes, (n) => shapeSize(n.shape));
+  const circles = nodes.filter((n) => n.shape.kind === 'circle');
+  const blobs = nodes.filter((n) => n.shape.kind === 'blob');
+  const radius = common(circles, (n) => shapeSize(n.shape));
   const anyOverrides = nodes.some((n) => Object.keys(n.style).length > 0);
   const catId = common(nodes, (n) => n.categoryId);
 
@@ -36,7 +38,7 @@ export function BubbleProps({ ids }: { ids: Id[] }) {
 
   return (
     <>
-      <Section title={single ? 'Bubble' : `${nodes.length} bubbles`}>
+      <Section title={single ? (blobs.length ? 'Shape' : 'Bubble') : `${nodes.length} elements`}>
         <Field label="Name">
           <TextField value={common(nodes, (n) => n.name)} onChange={(v) => A.updateNodes(ids, (n) => void (n.name = v), 'name')} />
         </Field>
@@ -53,6 +55,8 @@ export function BubbleProps({ ids }: { ids: Id[] }) {
       </Section>
 
       <Section title="Size">
+        {circles.length > 0 && (
+        <>
         <Field label="Radius" hint={`Type 12.5 or 12'-6"`}>
           <NumberField
             value={radius}
@@ -66,6 +70,20 @@ export function BubbleProps({ ids }: { ids: Id[] }) {
         <Field label="Diameter">
           <ReadOnly value={radius === null ? '—' : formatFeetInches(radius * 2)} />
         </Field>
+        </>
+        )}
+        {blobs.length > 0 && (
+          <Field label="Gap to bubbles" hint="Distance between attached edges and the bubbles they hug">
+            <NumberField
+              value={common(blobs, (n) => (n.shape.kind === 'blob' ? n.shape.gapFt : 0))}
+              format={formatFeetInches}
+              parse={(s) => parseLength(s)}
+              step={0.5}
+              min={0}
+              onCommit={(v) => A.setBlobGap(blobs.map((n) => n.id), v)}
+            />
+          </Field>
+        )}
         <Field label={single ? 'Area' : 'Total area'}>
           <ReadOnly value={single ? formatArea(nodeArea(nodes[0], doc)) : formatArea(totalArea(doc, ids))} />
         </Field>
@@ -91,8 +109,9 @@ export function BubbleProps({ ids }: { ids: Id[] }) {
         <button className="btn danger" onClick={A.deleteSelection}>Delete</button>
       </div>
       <p className="tip">
-        A dot next to a setting means it overrides the category. Scroll over a selected bubble to resize ±
-        {formatLengthCompact(doc.settings.snap.radiusIncrementFt)} (Shift: ±1").
+        {blobs.length > 0
+          ? 'Drag a point to move it; near a bubble it snaps on (Alt: no snapping). Double-click a point to delete it, or the edge to add one.'
+          : <>A dot next to a setting means it overrides the category. Scroll over a selected bubble to resize ±{formatLengthCompact(doc.settings.snap.radiusIncrementFt)} (Shift: ±1").</>}
       </p>
     </>
   );

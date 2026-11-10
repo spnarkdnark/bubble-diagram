@@ -1,7 +1,7 @@
 import { useDoc } from '../../store/documentStore';
 import * as A from '../../store/actions';
 import { totalArea } from '../../model/selectors';
-import { formatArea, formatLengthCompact } from '../../model/units';
+import { formatArea, formatLengthCompact, formatFeetInches as formatFeetInchesLocal, parseLength as parseLengthLocal } from '../../model/units';
 import { Field, NumberField, ReadOnly, Section, SelectField, TextField } from '../controls/Controls';
 import { findOverlaps, OVERLAP_MODE_LABELS } from '../../model/overlaps';
 import { GraphicPanel } from './GraphicPanel';
@@ -27,6 +27,16 @@ export function DrawingPanel() {
             value={SNAP_OPTIONS.find((o) => Math.abs(parseFloat(o.value) - doc.settings.snap.radiusIncrementFt) < 1e-6)?.value ?? null}
             options={SNAP_OPTIONS}
             onChange={(v) => A.setSnapIncrement(parseFloat(v))}
+          />
+        </Field>
+        <Field label="Shape gap" hint="Default distance between new shapes and the bubbles they hug">
+          <NumberField
+            value={doc.settings.shapeGapFt}
+            format={formatFeetInchesLocal}
+            parse={(s) => parseLengthLocal(s)}
+            step={0.5}
+            min={0}
+            onCommit={(v) => A.setShapeGapDefault(v)}
           />
         </Field>
         <Field label="Bubbles">
@@ -90,7 +100,8 @@ export function DrawingPanel() {
       </Section>
       <Section title="Shortcuts">
         <dl className="shortcuts">
-          <dt>V / B / C</dt><dd>Select / Bubble / Connect</dd>
+          <dt>V / B / C / S</dt><dd>Select / Bubble / Connect / Shape</dd>
+          <dt>Shape tool</dt><dd>Drag freehand or click points; double-click a gap to fill it</dd>
           <dt>Scroll</dt><dd>Zoom (over selected bubble: resize {formatLengthCompact(doc.settings.snap.radiusIncrementFt)})</dd>
           <dt>Space + drag</dt><dd>Pan (or middle mouse)</dd>
           <dt>Shift + click</dt><dd>Add to selection</dd>

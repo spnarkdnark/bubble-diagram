@@ -8,7 +8,8 @@
  */
 import type { BubbleNode, GraphicSettings, Id, Project } from '../model/types';
 import { resolveStyle, type ResolvedStyle } from '../model/selectors';
-import { connectionSegment } from '../model/geometry';
+import { connectionSegment, nodeCenter } from '../model/geometry';
+import { blobGeometry } from '../model/blob';
 import { CONNECTION_COLOR, CONNECTION_STYLES, dashPatternPt, LABEL_FONT_FAMILY } from '../model/defaults';
 import { darken, hexToRgb, rgbToHex } from '../model/color';
 import { ptToFt } from '../model/units';
@@ -113,6 +114,34 @@ function opsToPrims(ops: Op[], colors: Record<ColorSlot, string>, fillAlpha: num
   });
 }
 
+/** Resample a closed polygon to roughly even spacing (sketch noise needs even samples). */
+function resample(poly: Pt[], spacing: number): Pt[] {
+  if (poly.length < 3) return poly;
+  let total = 0;
+  for (let i = 0; i < poly.length; i++) {
+    const a = poly[i];
+    const b = poly[(i + 1) % poly.length];
+    total += Math.hypot(b.x - a.x, b.y - a.y);
+  }
+  const n = Math.max(24, Math.min(600, Math.round(total / spacing)));
+  const step = total / n;
+  const out: Pt[] = [];
+  let acc = 0;
+  let next = 0;
+  for (let i = 0; i < poly.length && out.length < n; i++) {
+    const a = poly[i];
+    const b = poly[(i + 1) % poly.length];
+    const len = Math.hypot(b.x - a.x, b.y - a.y);
+    while (next <= acc + len && out.length < n) {
+      const t = len ? (next - acc) / len : 0;
+      out.push({ x: a.x + (b.x - a.x) * t, y: a.y + (b.y - a.y) * t });
+      next += step;
+    }
+    acc += len;
+  }
+  return out;
+}
+
 function circleSamples(r: number, ftPerPt: number): number {
   const rPt = r / ftPerPt;
   return Math.max(48, Math.min(240, Math.round(rPt * 1.2)));
@@ -124,13 +153,13 @@ const nodeCache = new Map<Id, { key: string; scene: NodeScene }>();
 function nodeScene(node: BubbleNode, project: Project, style: ResolvedStyle, base: SketchParams, suppressOutline: boolean): NodeScene {
   const ftPerPt = ptToFt(1, project.settings.scale);
   const g = project.settings.graphic;
-  const key = JSON.stringify([node, style, base, suppressOutline, ftPerPt, g.labelFont, g.seed, measureEpoch()]);
+  const blob = node.shape.kind === 'blob' ? blobGeometry(node, project) : null;
+  const key = JSON.stringify([node, style, base, suppressOutline, ftPerPt, g.labelFont, g.seed, measureEpoch(), blob?.ctrl]);
   const hit = nodeCache.get(node.id);
   if (hit && hit.key === key) return hit.scene;
 
   const params = scaleParams(base, style.sketchAmount);
   const clean = isClean(params);
-  const r = node.shape.radiusFt;
   const dashPt = dashPatternPt(style.strokeStyle, style.strokeWeightPt);
   const stroke: StrokeP | undefined =
     style.strokeWeightPt > 0 && !suppressOutline
@@ -142,14 +171,25 @@ function nodeScene(node: BubbleNode, project: Project, style: ResolvedStyle, bas
           cap: style.strokeStyle === 'dotted' ? 'round' : 'butt',
         }
       : undefined;
+  const fillPaint = { color: style.fill, alpha: style.fillOpacity };
 
   let fill: Prim[];
   let outline: Prim[];
   if (clean) {
-    fill = [{ t: 'circle', cx: node.x, cy: node.y, r, fill: { color: style.fill, alpha: style.fillOpacity } }];
-    outline = stroke ? [{ t: 'circle', cx: node.x, cy: node.y, r, stroke }] : [];
+    if (node.shape.kind === 'circle') {
+      const r = node.shape.radiusFt;
+      fill = [{ t: 'circle', cx: node.x, cy: node.y, r, fill: fillPaint }];
+      outline = stroke ? [{ t: 'circle', cx: node.x, cy: node.y, r, stroke }] : [];
+    } else {
+      const poly = blob!.poly;
+      fill = [{ t: 'path', pts: poly, closed: true, fill: fillPaint }];
+      outline = stroke ? [{ t: 'path', pts: poly, closed: true, stroke }] : [];
+    }
   } else {
-    const ring = sampleCircle(node.x, node.y, r, circleSamples(r, ftPerPt));
+    const ring =
+      node.shape.kind === 'circle'
+        ? sampleCircle(node.x, node.y, node.shape.radiusFt, circleSamples(node.shape.radiusFt, ftPerPt))
+        : resample(blob!.poly, 1.5 * ftPerPt);
     const colors = { fill: style.fill, fillDark: darken(style.fill, 0.28), stroke: style.stroke };
     const opts = { params, seed: seeded(node.id, g.seed), unitsPerPt: ftPerPt };
     fill = opsToPrims(sketchFill(ring, opts), colors, style.fillOpacity);
@@ -166,7 +206,7 @@ function nodeScene(node: BubbleNode, project: Project, style: ResolvedStyle, bas
     id: node.id,
     fill,
     outline,
-    label: layout.lines.length ? { x: node.x, y: node.y, layout, fontFamily: font.family } : null,
+    label: layout.lines.length ? { ...nodeCenter(node, project), layout, fontFamily: font.family } : null,
   };
   nodeCache.set(node.id, { key, scene });
   if (nodeCache.size > 5000) nodeCache.clear();
@@ -214,9 +254,10 @@ export function buildScene(project: Project): Scene {
     if (!s) styles.set(id, (s = resolveStyle(project.nodes[id], project)));
     return s;
   };
+  // overlaps only exist between circles
   const circle = (id: Id) => {
     const n = project.nodes[id];
-    return { x: n.x, y: n.y, r: n.shape.radiusFt };
+    return { x: n.x, y: n.y, r: n.shape.kind === 'circle' ? n.shape.radiusFt : 0 };
   };
   const overlapWidth = ptToFt(ov.weightPt, project.settings.scale);
   const colorFor = (ids: Id[]): string => {

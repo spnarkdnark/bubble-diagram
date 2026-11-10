@@ -88,6 +88,26 @@ export function useKeyboardShortcuts(handlers: ShortcutHandlers = {}) {
       }
       if (mod) return;
 
+      // shape tool draft editing
+      if (ui.shapeDraft?.length) {
+        if (e.key === 'Enter') {
+          e.preventDefault();
+          A.finishShapeDraft();
+          ui.setTool('select');
+          return;
+        }
+        if (e.key === 'Escape') {
+          ui.setShapeDraft(null);
+          return;
+        }
+        if (e.key === 'Backspace' || e.key === 'Delete') {
+          e.preventDefault();
+          const d = ui.shapeDraft.slice(0, -1);
+          ui.setShapeDraft(d.length ? d : null);
+          return;
+        }
+      }
+
       switch (e.key) {
         case ' ':
           e.preventDefault();
@@ -127,6 +147,9 @@ export function useKeyboardShortcuts(handlers: ShortcutHandlers = {}) {
           return;
         case 'c':
           ui.setTool('connect');
+          return;
+        case 's':
+          ui.setTool('shape');
           return;
         case 'f':
           A.zoomToFit();

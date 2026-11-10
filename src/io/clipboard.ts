@@ -6,6 +6,7 @@ import type { BubbleNode, Category, Connection, Id, OverlapMode, Point, Project,
 import { boundsCenter, nodeBounds, unionBounds } from '../model/geometry';
 import { createCategory, newId } from '../model/factory';
 import { overlapKey } from '../model/overlaps';
+import { detachAnchors } from '../model/blob';
 export { overlapKey };
 
 export const CLIP_TYPE = 'bubble-diagram/clip';
@@ -25,7 +26,12 @@ export function buildClip(project: Project, nodeIds: Id[]): ClipPayload | null {
   const ids = project.nodeOrder.filter((id) => nodeIds.includes(id));
   if (ids.length === 0) return null;
   const set = new Set(ids);
-  const nodes = ids.map((id) => structuredClone(project.nodes[id]));
+  const nodes = ids.map((id) => {
+    const n = structuredClone(project.nodes[id]);
+    // shapes copied without the bubbles they hug keep their outline as free points
+    if (n.shape.kind === 'blob') n.shape = detachAnchors(project.nodes[id], project, (a) => !set.has(a));
+    return n;
+  });
   const connections = Object.values(project.connections).filter((c) => set.has(c.from) && set.has(c.to));
   const catIds = new Set(nodes.map((n) => n.categoryId).filter(Boolean) as Id[]);
   const categories = [...catIds].map((id) => project.categories[id]).filter(Boolean);
@@ -82,6 +88,10 @@ export function planPaste(project: Project, clip: ClipPayload, at: Point): Paste
     x: n.x + dx,
     y: n.y + dy,
     categoryId: n.categoryId ? catMap.get(n.categoryId) ?? null : null,
+    shape:
+      n.shape.kind === 'blob'
+        ? { ...n.shape, points: n.shape.points.map((pt) => (pt.t === 'anchor' ? { ...pt, node: idMap.get(pt.node) ?? pt.node } : pt)) }
+        : n.shape,
   }));
   const connections = clip.connections
     .filter((c) => idMap.has(c.from) && idMap.has(c.to))

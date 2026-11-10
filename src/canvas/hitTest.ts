@@ -26,7 +26,7 @@ export function handlePosition(project: Project, id: Id): Point | null {
 export function topNodeAt(project: Project, p: Point): Id | null {
   for (let i = project.nodeOrder.length - 1; i >= 0; i--) {
     const id = project.nodeOrder[i];
-    if (containsPoint(project.nodes[id], p)) return id;
+    if (containsPoint(project.nodes[id], p, project)) return id;
   }
   return null;
 }

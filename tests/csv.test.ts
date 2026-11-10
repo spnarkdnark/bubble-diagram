@@ -30,7 +30,7 @@ Bad,,Service,
     for (let i = 0; i < nodes.length; i++)
       for (let j = i + 1; j < nodes.length; j++) {
         const d = Math.hypot(nodes[i].x - nodes[j].x, nodes[i].y - nodes[j].y);
-        expect(d).toBeGreaterThan(nodes[i].shape.radiusFt + nodes[j].shape.radiusFt);
+        expect(d).toBeGreaterThan((nodes[i].shape as any).radiusFt + (nodes[j].shape as any).radiusFt);
       }
   });
 });

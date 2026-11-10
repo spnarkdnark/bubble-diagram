@@ -16,6 +16,8 @@ export interface DrawingSettings {
   unitSystem: UnitSystem;
   grid: { visible: boolean; spacingFt: number };
   snap: { radiusIncrementFt: number };
+  /** default gap for new shapes drawn against bubbles, feet */
+  shapeGapFt: number;
   /** style for elements without a category */
   defaultStyle: StyleProps;
   graphic: GraphicSettings;
@@ -62,13 +64,27 @@ export interface Category {
  * Tagged union so new shape kinds (ellipse, roundedRect) can be added later.
  * Every function that switches on `kind` lives in model/geometry.ts.
  */
-export type Shape = CircleShape;
+export type Shape = CircleShape | BlobShape;
 // Future: | { kind: 'ellipse'; rxFt: number; ryFt: number }
 //         | { kind: 'roundedRect'; widthFt: number; heightFt: number; cornerFt: number }
 
 export interface CircleShape {
   kind: 'circle';
   radiusFt: number;
+}
+
+/** A control point of a blob: free (feet relative to the node's x/y) or anchored to a bubble's offset ring. */
+export type BlobPoint =
+  | { t: 'free'; x: number; y: number }
+  /** `arc`: the segment to the next point follows this bubble's ring (next point must anchor the same bubble) */
+  | { t: 'anchor'; node: Id; angle: number; dir: 1 | -1; arc: boolean };
+
+/** Freeform closed spline that can hug bubbles at an offset (see model/blob.ts). */
+export interface BlobShape {
+  kind: 'blob';
+  points: BlobPoint[];
+  /** distance between anchored edges and their bubbles, feet */
+  gapFt: number;
 }
 
 export type StrokeStyle = 'solid' | 'dashed' | 'dotted';

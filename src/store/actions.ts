@@ -21,6 +21,21 @@ import { createCategory, createConnection, createNode, newId, nextCategoryColor 
 import { findConnection, resolveStyle } from '../model/selectors';
 import { boundsCenter, intersectsRect, nodeBounds, shapeSize, unionBounds, withSize } from '../model/geometry';
 import { DUPLICATE_OFFSET_FT, MIN_RADIUS_FT } from '../model/defaults';
+import {
+  blobFromClicks,
+  blobFromPocket,
+  circleRings,
+  deletePoint,
+  detachAnchors,
+  insertPoint,
+  remapBlob,
+  toBlobShape,
+  type BuildPoint,
+} from '../model/blob';
+import { EXTERIOR_CATEGORY } from '../model/defaults';
+
+/** Screen distance (px) within which shape points snap to a bubble's offset ring. */
+export const SNAP_PX = 14;
 import { pxPerFt, stepToIncrement } from '../model/units';
 import { getDoc, useDocument } from './documentStore';
 import { useUi } from './uiStore';
@@ -60,7 +75,7 @@ export function selectAll() {
 
 export function nodesInRect(rect: { minX: number; minY: number; maxX: number; maxY: number }): Id[] {
   const d = getDoc();
-  return d.nodeOrder.filter((id) => intersectsRect(d.nodes[id], rect));
+  return d.nodeOrder.filter((id) => intersectsRect(d.nodes[id], rect, d));
 }
 
 /** Keep the selection consistent with the document (after undo/delete/load). */
@@ -135,7 +150,13 @@ export function deleteSelection() {
   const { nodes, connections } = ui().selection;
   if (nodes.length === 0 && connections.length === 0) return;
   const nodeSet = new Set(nodes);
+  const doc = getDoc();
+  // shapes hugging deleted bubbles keep their outline: anchors become free points
+  const detached = Object.values(doc.nodes)
+    .filter((n) => n.shape.kind === 'blob' && !nodeSet.has(n.id) && n.shape.points.some((p) => p.t === 'anchor' && nodeSet.has(p.node)))
+    .map((n) => ({ id: n.id, shape: detachAnchors(n, doc, (id) => nodeSet.has(id)) }));
   commit((d) => {
+    for (const x of detached) d.nodes[x.id].shape = x.shape;
     for (const id of nodes) delete d.nodes[id];
     d.nodeOrder = d.nodeOrder.filter((id) => !nodeSet.has(id));
     for (const c of Object.values(d.connections)) {
@@ -157,7 +178,9 @@ export function duplicateSelection() {
     for (const id of ids) {
       const src = doc.nodes[id];
       const nid = map.get(id)!;
-      d.nodes[nid] = { ...structuredClone(src), id: nid, x: src.x + DUPLICATE_OFFSET_FT, y: src.y + DUPLICATE_OFFSET_FT };
+      const copy = { ...structuredClone(src), id: nid, x: src.x + DUPLICATE_OFFSET_FT, y: src.y + DUPLICATE_OFFSET_FT };
+      if (copy.shape.kind === 'blob') copy.shape = remapBlob(src, doc, map);
+      d.nodes[nid] = copy;
       d.nodeOrder.push(nid);
     }
     for (const c of Object.values(doc.connections)) {
@@ -404,4 +427,70 @@ export function applyPreset(id: string) {
 
 export function redrawHand() {
   setGraphic({ seed: Math.floor(Math.random() * 1e6) + 1 }, false);
+}
+
+// ---------- shapes (blobs) ----------
+
+const shapeCount = () => Object.values(getDoc().nodes).filter((n) => n.shape.kind === 'blob').length;
+
+/** Create a blob from build points; returns its id or null when too few points. */
+export function createBlob(pts: BuildPoint[]): Id | null {
+  if (pts.length < 3) return null;
+  const doc = getDoc();
+  const { shape, origin } = toBlobShape(pts, doc.settings.shapeGapFt, circleRings(doc));
+  const exterior = Object.values(doc.categories).find((c) => c.name.trim().toLowerCase() === EXTERIOR_CATEGORY.toLowerCase());
+  const n = createNode({ name: `Outdoor ${shapeCount() + 1}`, x: origin.x, y: origin.y, shape, categoryId: exterior?.id ?? null });
+  commit((d) => {
+    d.nodes[n.id] = n;
+    // exterior spaces sit behind the bubbles
+    d.nodeOrder.unshift(n.id);
+  });
+  ui().select({ nodes: [n.id] });
+  return n.id;
+}
+
+export function finishShapeDraft() {
+  const draft = ui().shapeDraft;
+  ui().setShapeDraft(null);
+  if (!draft || draft.length < 3) return;
+  const doc = getDoc();
+  const k = pxPerFt(doc.settings.scale, ui().view.zoom);
+  createBlob(blobFromClicks(draft, circleRings(doc), doc.settings.shapeGapFt, SNAP_PX / k));
+}
+
+/** Double-click in a gap between bubbles: generate the hugging shape. */
+export function fillPocket(at: Point): boolean {
+  const doc = getDoc();
+  const k = pxPerFt(doc.settings.scale, ui().view.zoom);
+  const pts = blobFromPocket(at, circleRings(doc), doc.settings.shapeGapFt, 3 / k);
+  if (!pts) {
+    ui().showToast('No enclosed space there. Double-click in a gap surrounded by bubbles, or draw the shape by hand.');
+    return false;
+  }
+  return createBlob(pts) !== null;
+}
+
+export function setBlobGap(ids: Id[], gapFt: number) {
+  updateNodes(ids, (n) => {
+    if (n.shape.kind === 'blob') n.shape.gapFt = Math.max(0, gapFt);
+  });
+}
+
+export function setShapeGapDefault(gapFt: number) {
+  commit((d) => {
+    d.settings.shapeGapFt = Math.max(0, gapFt);
+  });
+}
+
+export function deleteBlobPoint(id: Id, index: number) {
+  updateNodes([id], (n) => {
+    if (n.shape.kind === 'blob') n.shape = deletePoint(n.shape, index);
+  });
+}
+
+export function insertBlobPoint(id: Id, after: number, p: Point) {
+  const n = getDoc().nodes[id];
+  if (n?.shape.kind !== 'blob') return;
+  const shape = insertPoint(n, after, p);
+  updateNodes([id], (d) => void (d.shape = shape));
 }

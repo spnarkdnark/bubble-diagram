@@ -1,4 +1,4 @@
-import type { OverlapMode, Project, StyleOverrides, StyleProps } from './types';
+import type { BlobPoint, OverlapMode, Project, Shape, StyleOverrides, StyleProps } from './types';
 import { SCHEMA_VERSION } from './types';
 import { DEFAULT_GRAPHIC, DEFAULT_OVERLAP, DEFAULT_SETTINGS, DEFAULT_STYLE } from './defaults';
 import { SCALES } from './units';
@@ -23,6 +23,20 @@ function cleanOverrides(raw: any): StyleOverrides {
 
 function fullStyle(raw: any, base: StyleProps = DEFAULT_STYLE): StyleProps {
   return { ...base, ...cleanOverrides(raw) };
+}
+
+function cleanShape(raw: any): Shape | null {
+  if (raw?.kind === 'circle') return typeof raw.radiusFt === 'number' && raw.radiusFt > 0 ? { kind: 'circle', radiusFt: raw.radiusFt } : null;
+  if (raw?.kind === 'blob' && Array.isArray(raw.points)) {
+    const points: BlobPoint[] = [];
+    for (const p of raw.points) {
+      if (p?.t === 'free' && typeof p.x === 'number' && typeof p.y === 'number') points.push({ t: 'free', x: p.x, y: p.y });
+      else if (p?.t === 'anchor' && typeof p.node === 'string' && typeof p.angle === 'number')
+        points.push({ t: 'anchor', node: p.node, angle: p.angle, dir: p.dir === -1 ? -1 : 1, arc: !!p.arc });
+    }
+    return points.length >= 3 ? { kind: 'blob', points, gapFt: typeof raw.gapFt === 'number' ? raw.gapFt : 2 } : null;
+  }
+  return null;
 }
 
 /** v1 → v2: category.color becomes a full style; node fill/label become sparse overrides. */
@@ -79,14 +93,14 @@ export function migrateProject(raw: unknown): Project {
   const nodes: Project['nodes'] = {};
   for (const [id, n] of Object.entries<any>(p.nodes)) {
     if (!n || typeof n.x !== 'number' || typeof n.y !== 'number') continue;
-    const r = n.shape?.radiusFt;
-    if (n.shape?.kind !== 'circle' || typeof r !== 'number' || !(r > 0)) continue;
+    const shape = cleanShape(n.shape);
+    if (!shape) continue;
     nodes[id] = {
       id,
       name: String(n.name ?? ''),
       x: n.x,
       y: n.y,
-      shape: { kind: 'circle', radiusFt: r },
+      shape,
       categoryId: n.categoryId ?? null,
       style: cleanOverrides(n.style),
     };
@@ -96,6 +110,12 @@ export function migrateProject(raw: unknown): Project {
     categories[id] = { id, name: String(c?.name ?? 'Category'), style: fullStyle(c?.style) };
   }
   for (const n of Object.values(nodes)) if (n.categoryId && !categories[n.categoryId]) n.categoryId = null;
+  // blob anchors must point at existing circles
+  for (const n of Object.values(nodes)) {
+    if (n.shape.kind !== 'blob') continue;
+    n.shape.points = n.shape.points.filter((pt) => pt.t === 'free' || nodes[pt.node]?.shape.kind === 'circle');
+    if (n.shape.points.length < 3) delete nodes[n.id];
+  }
 
   const connections: Project['connections'] = {};
   for (const [id, c] of Object.entries<any>(p.connections ?? {})) {

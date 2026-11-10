@@ -85,6 +85,7 @@ export const DEFAULT_SETTINGS: DrawingSettings = {
   unitSystem: 'imperial',
   grid: { visible: true, spacingFt: 10 },
   snap: { radiusIncrementFt: RADIUS_SNAP_FT },
+  shapeGapFt: 2,
   defaultStyle: DEFAULT_STYLE,
   graphic: DEFAULT_GRAPHIC,
   overlap: DEFAULT_OVERLAP,

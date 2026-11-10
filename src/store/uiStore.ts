@@ -1,7 +1,7 @@
 import { create } from 'zustand';
 import type { Id, Point } from '../model/types';
 
-export type Tool = 'select' | 'bubble' | 'connect';
+export type Tool = 'select' | 'bubble' | 'connect' | 'shape';
 
 export interface Selection {
   nodes: Id[];
@@ -31,6 +31,9 @@ interface UiState {
   /** bumps when a web font finishes loading so the canvas re-measures labels */
   fontEpoch: number;
   bumpFontEpoch: () => void;
+  /** points clicked so far with the shape tool (world feet) */
+  shapeDraft: Point[] | null;
+  setShapeDraft: (pts: Point[] | null) => void;
 
   setTool: (t: Tool) => void;
   select: (sel: Partial<Selection>) => void;
@@ -58,9 +61,11 @@ export const useUi = create<UiState>((set) => ({
   exportOpen: false,
   toast: null,
   fontEpoch: 0,
+  shapeDraft: null,
+  setShapeDraft: (shapeDraft) => set({ shapeDraft }),
   bumpFontEpoch: () => set((s) => ({ fontEpoch: s.fontEpoch + 1 })),
 
-  setTool: (tool) => set({ tool, connectFrom: null }),
+  setTool: (tool) => set({ tool, connectFrom: null, shapeDraft: null }),
   select: (sel) =>
     set({ selection: { nodes: sel.nodes ?? [], connections: sel.connections ?? [], overlaps: sel.overlaps ?? [] } }),
   clearSelection: () => set({ selection: { nodes: [], connections: [], overlaps: [] } }),
