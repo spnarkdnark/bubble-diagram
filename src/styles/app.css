@@ -149,3 +149,4 @@ kbd { font-family: var(--mono); font-size: 11px; border: 1px solid var(--line-st
 .toolbar { flex-wrap: nowrap; }
 .group { flex: none; }
 .canvas-tip { position: absolute; top: 12px; left: 50%; transform: translateX(-50%); background: rgba(31,35,40,0.88); color: #fff; font-size: 12px; padding: 7px 12px; border-radius: var(--radius); pointer-events: none; max-width: min(720px, 90%); text-align: center; }
+.label-editor { position: absolute; z-index: 5; text-align: center; resize: none; overflow: hidden; border: 1.5px solid var(--accent); border-radius: 4px; background: rgba(255,255,255,0.94); box-shadow: 0 0 0 3px var(--accent-soft); padding: 2px 6px; outline: none; }

@@ -18,6 +18,8 @@ export interface LabelLine {
   /** baseline-free: top of the line box relative to bubble center, pt */
   topPt: number;
   heightPt: number;
+  /** measured text width, pt */
+  wPt: number;
 }
 
 export interface LabelLayout {
@@ -99,12 +101,12 @@ export function layoutLabel(
   const widthPt = Math.max(ftToPt(nodeSize(node, project) * 2 * (node.shape.kind === 'circle' ? 0.8 : 0.6), scale), size * 4);
   const rows: Omit<LabelLine, 'topPt'>[] = [];
   for (const t of wrap(name, size, weight, widthPt))
-    rows.push({ text: t, sizePt: size, weight, secondary: false, color: style.labelColor, heightPt: size * LINE_HEIGHT });
+    rows.push({ text: t, sizePt: size, weight, secondary: false, color: style.labelColor, heightPt: size * LINE_HEIGHT, wPt: measure(t, size, weight) });
   const sec = secondaryLabel(node, project, style);
   family = font.family;
   if (sec) {
     const s = size * SECONDARY_RATIO;
-    rows.push({ text: sec, sizePt: s, weight: 400, secondary: true, color: SECONDARY_LABEL_COLOR, heightPt: s * LINE_HEIGHT });
+    rows.push({ text: sec, sizePt: s, weight: 400, secondary: true, color: SECONDARY_LABEL_COLOR, heightPt: s * LINE_HEIGHT, wPt: measure(sec, s, 400) });
   }
   const total = rows.reduce((a, r) => a + r.heightPt, 0);
   let y = -total / 2;

@@ -95,6 +95,9 @@ Hand fonts are bundled via @fontsource; exports outline them with opentype.js
 - Selected shape: drag control points (snap to rings; Alt = no snap), double-click a
   point to delete it, the edge to insert one.
 - Overlaps: ◇ marker at each overlap of a selected bubble; click it to set its mode.
+- Names: click the name of the already-selected element (or double-click any name) to
+  edit it in place (`canvas/LabelEditor.tsx`, `uiStore.editingLabel`); Enter saves,
+  Shift+Enter breaks the line, Esc cancels, blur saves. One undo step.
 - Ctrl+C/X/V use native clipboard events (JSON text, works across tabs); paste goes
   to the cursor. Ctrl+Shift+V pastes the copied element's look onto the selection.
   Pasting tab/comma-separated rows with a header imports bubbles.

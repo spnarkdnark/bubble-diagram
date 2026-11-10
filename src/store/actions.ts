@@ -494,3 +494,11 @@ export function insertBlobPoint(id: Id, after: number, p: Point) {
   const shape = insertPoint(n, after, p);
   updateNodes([id], (d) => void (d.shape = shape));
 }
+
+/** Rename from the on-canvas editor: one undo step; empty names are ignored. */
+export function renameNode(id: Id, name: string) {
+  const n = getDoc().nodes[id];
+  const clean = name.replace(/\s+$/g, '');
+  if (!n || !clean.trim() || clean === n.name) return;
+  updateNodes([id], (d) => void (d.name = clean));
+}

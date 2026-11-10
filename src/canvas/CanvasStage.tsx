@@ -8,7 +8,8 @@ import { formatFeetInches, pxPerFt, snap } from '../model/units';
 import { getDoc, useDoc, useDocument } from '../store/documentStore';
 import { useUi } from '../store/uiStore';
 import * as A from '../store/actions';
-import { buildScene } from '../render/scene';
+import { buildScene, labelNameRect } from '../render/scene';
+import { LabelEditor } from './LabelEditor';
 import { drawLabels, drawPrims } from '../render/drawCanvas';
 import { GridLayer } from './layers/GridLayer';
 import { handlePosition, hitTest, topNodeAt } from './hitTest';
@@ -26,7 +27,7 @@ const WHEEL_STEP_THRESHOLD = 40;
 type Interaction =
   | { kind: 'none' }
   | { kind: 'pan'; sx: number; sy: number; panX: number; panY: number }
-  | { kind: 'move'; sx: number; sy: number; start: Point; origins: Map<Id, Point>; moved: boolean; clicked: Id }
+  | { kind: 'move'; sx: number; sy: number; start: Point; origins: Map<Id, Point>; moved: boolean; clicked: Id; wasSelected: boolean }
   | { kind: 'resize'; id: Id }
   | { kind: 'marquee'; start: Point; additive: boolean }
   | { kind: 'connect'; from: Id }
@@ -85,6 +86,7 @@ export function CanvasStage() {
   const [drawPreview, setDrawPreview] = useState<Point[] | null>(null);
   const [snapHint, setSnapHint] = useState<SnapHint>(null);
   const shapeDraft = useUi((s) => s.shapeDraft);
+  const editingLabel = useUi((s) => s.editingLabel);
   const interaction = useRef<Interaction>({ kind: 'none' });
   const sceneRef = useRef<ReturnType<typeof buildScene> | null>(null);
   const wheelAcc = useRef(0);
@@ -149,6 +151,17 @@ export function CanvasStage() {
     return (sceneRef.current?.overlaps ?? []).filter(
       (o) => sel.overlaps.includes(o.key) || sel.nodes.includes(o.a) || sel.nodes.includes(o.b),
     );
+  };
+  /** node whose name label is under `p` (topmost first) */
+  const labelAt = (p: Point): Id | null => {
+    const sc = sceneRef.current;
+    if (!sc) return null;
+    const pad = 3 / currentK();
+    for (let i = sc.nodes.length - 1; i >= 0; i--) {
+      const r = labelNameRect(sc.nodes[i].label, sc.ftPerPt);
+      if (r && p.x >= r.minX - pad && p.x <= r.maxX + pad && p.y >= r.minY - pad && p.y <= r.maxY + pad) return sc.nodes[i].id;
+    }
+    return null;
   };
   const hitAt = (p: Point) => hitTest(getDoc(), p, HIT_TOL_PX / currentK(), currentHandleFor(), visibleMarkers());
   /** control point of the selected blob under the cursor */
@@ -243,6 +256,7 @@ export function CanvasStage() {
           origins: new Map(ids.map((id) => [id, { x: doc.nodes[id].x, y: doc.nodes[id].y }])),
           moved: false,
           clicked: hit.id,
+          wasSelected: isSel && !e.shiftKey,
         };
         break;
       }
@@ -364,6 +378,9 @@ export function CanvasStage() {
         case 'move':
           if (it.moved) useDocument.getState().endGesture();
           else if (!e.shiftKey && ui.selection.nodes.length > 1) A.selectNodes([it.clicked]);
+          // click on the name of the already-selected bubble: edit it in place
+          else if (it.wasSelected && ui.selection.nodes.length === 1 && labelAt(toWorld(e.clientX, e.clientY)) === it.clicked)
+            ui.setEditingLabel(it.clicked);
           break;
         case 'resize':
           useDocument.getState().endGesture();
@@ -447,6 +464,15 @@ export function CanvasStage() {
       } else ui.setShapeDraft(kept);
       return;
     }
+    // double-click a name to edit it (but not on a shape's control point)
+    if (ui.tool === 'select' && !blobPointAt(p)) {
+      const lab = labelAt(p);
+      if (lab) {
+        A.selectNodes([lab]);
+        ui.setEditingLabel(lab);
+        return;
+      }
+    }
     const target = blobHandleTarget();
     if (ui.tool === 'select' && target) {
       const bp = blobPointAt(p);
@@ -478,6 +504,7 @@ export function CanvasStage() {
     if (e.clientX < r.left || e.clientX > r.right || e.clientY < r.top || e.clientY > r.bottom) return;
     const wp = toWorld(e.clientX, e.clientY);
     if (blobPointAt(wp)) return void (el.style.cursor = 'grab');
+    if (ui.tool === 'select' && ui.selection.nodes.length === 1 && labelAt(wp) === ui.selection.nodes[0]) return void (el.style.cursor = 'text');
     const hit = hitAt(wp);
     el.style.cursor =
       ui.tool === 'connect'
@@ -576,7 +603,7 @@ export function CanvasStage() {
                 drawPrims(ctx, n.outline);
               }
               drawPrims(ctx, scene.overlays);
-              drawLabels(ctx, scene.nodes.flatMap((n) => (n.label ? [n.label] : [])), k, scene.ftPerPt);
+              drawLabels(ctx, scene.nodes.flatMap((n) => (n.label && n.id !== editingLabel ? [n.label] : [])), k, scene.ftPerPt);
             }}
           />
         </Layer>
@@ -688,6 +715,28 @@ export function CanvasStage() {
           )}
         </Layer>
       </Stage>
+      {editingLabel && doc.nodes[editingLabel] && (() => {
+        const ns = scene.nodes.find((n) => n.id === editingLabel);
+        const label = ns?.label;
+        if (!label) return null;
+        const close = () => useUi.getState().setEditingLabel(null);
+        return (
+          <LabelEditor
+            key={editingLabel}
+            name={doc.nodes[editingLabel].name}
+            label={label}
+            k={k}
+            panX={view.panX}
+            panY={view.panY}
+            ftPerPt={scene.ftPerPt}
+            onCommit={(t) => {
+              A.renameNode(editingLabel, t);
+              close();
+            }}
+            onCancel={close}
+          />
+        );
+      })()}
       {tool === 'shape' && (
         <div className="canvas-tip">
           {shapeDraft?.length

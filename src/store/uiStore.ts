@@ -33,6 +33,9 @@ interface UiState {
   bumpFontEpoch: () => void;
   /** points clicked so far with the shape tool (world feet) */
   shapeDraft: Point[] | null;
+  /** node whose name is being edited on the canvas */
+  editingLabel: Id | null;
+  setEditingLabel: (id: Id | null) => void;
   setShapeDraft: (pts: Point[] | null) => void;
 
   setTool: (t: Tool) => void;
@@ -62,6 +65,8 @@ export const useUi = create<UiState>((set) => ({
   toast: null,
   fontEpoch: 0,
   shapeDraft: null,
+  editingLabel: null,
+  setEditingLabel: (editingLabel) => set({ editingLabel }),
   setShapeDraft: (shapeDraft) => set({ shapeDraft }),
   bumpFontEpoch: () => set((s) => ({ fontEpoch: s.fontEpoch + 1 })),
 

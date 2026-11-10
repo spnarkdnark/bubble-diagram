@@ -382,3 +382,19 @@ export function buildScene(project: Project): Scene {
 
   return { connections, nodes, overlays, overlaps, ftPerPt };
 }
+
+/** World-space box (feet) around a label's name lines; null when it has none. */
+export function labelNameRect(label: LabelPrim | null, ftPerPt: number): { minX: number; minY: number; maxX: number; maxY: number } | null {
+  if (!label) return null;
+  const lines = label.layout.lines.filter((l) => !l.secondary);
+  if (lines.length === 0) return null;
+  const w = Math.max(...lines.map((l) => l.wPt), lines[0].sizePt * 2);
+  const top = lines[0].topPt;
+  const bottom = lines[lines.length - 1].topPt + lines[lines.length - 1].heightPt;
+  return {
+    minX: label.x - (w / 2) * ftPerPt,
+    maxX: label.x + (w / 2) * ftPerPt,
+    minY: label.y + top * ftPerPt,
+    maxY: label.y + bottom * ftPerPt,
+  };
+}
