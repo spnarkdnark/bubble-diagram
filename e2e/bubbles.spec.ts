@@ -104,3 +104,11 @@ test('names edit in place only on the selected bubble', async ({ page, canvas })
   await page.keyboard.press('Escape');
   expect((await nodes(page))[0].name).toBe('Reading Room');
 });
+
+test('drag from one bubble to another connects them', async ({ page, canvas }) => {
+  await canvas.bubble(300, 300);
+  await canvas.bubble(700, 300);
+  await page.keyboard.press('c');
+  await canvas.drag([300, 300], [700, 300]);
+  expect(Object.keys((await doc(page)).connections)).toHaveLength(1);
+});
