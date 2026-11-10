@@ -1,4 +1,4 @@
-import type { Tool as ToolId } from '../../store/uiStore';
+import type { ToolId } from '../../store/uiStore';
 import { bubbleTool } from './bubble';
 import { connectTool } from './connect';
 import { selectTool } from './select';

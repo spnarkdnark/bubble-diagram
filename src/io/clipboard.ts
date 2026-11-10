@@ -7,7 +7,6 @@ import { boundsCenter, nodeBounds, unionBounds } from '../model/geometry';
 import { createCategory, newId } from '../model/factory';
 import { overlapKey } from '../model/overlaps';
 import { detachAnchors } from '../model/blob';
-export { overlapKey };
 
 export const CLIP_TYPE = 'bubble-diagram/clip';
 

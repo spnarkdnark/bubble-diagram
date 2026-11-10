@@ -4,23 +4,11 @@ import { useUi } from '../store/uiStore';
 import * as A from '../store/actions';
 import { NUDGE_BIG_FT, NUDGE_FT } from '../model/defaults';
 import { armPasteStyle } from '../io/clipboardActions';
+import { isTextEntry } from '../ui/focus';
 
 export interface ShortcutHandlers {
   save?: () => void;
   open?: () => void;
-}
-
-function isTyping(e: KeyboardEvent): boolean {
-  const t = e.target as HTMLElement | null;
-  if (!t) return false;
-  const tag = t.tagName;
-  if (tag === 'TEXTAREA' || t.isContentEditable) return true;
-  if (tag === 'SELECT') return true;
-  if (tag === 'INPUT') {
-    const type = (t as HTMLInputElement).type;
-    return !['checkbox', 'radio', 'range', 'color', 'button'].includes(type);
-  }
-  return false;
 }
 
 export function useKeyboardShortcuts(handlers: ShortcutHandlers = {}) {
@@ -32,7 +20,7 @@ export function useKeyboardShortcuts(handlers: ShortcutHandlers = {}) {
       const ui = useUi.getState();
 
       // Undo/redo/save work even while typing? Only outside text fields (let inputs undo text).
-      if (isTyping(e)) return;
+      if (isTextEntry(e.target)) return;
       if (ui.exportOpen) {
         if (e.key === 'Escape') ui.setExportOpen(false);
         return;

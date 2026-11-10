@@ -1,7 +1,8 @@
 import { create } from 'zustand';
 import type { Id, Point } from '../model/types';
 
-export type Tool = 'select' | 'bubble' | 'connect' | 'shape';
+/** Which canvas tool is active (implementations live in canvas/tools/). */
+export type ToolId = 'select' | 'bubble' | 'connect' | 'shape';
 
 export interface Selection {
   nodes: Id[];
@@ -18,7 +19,7 @@ export interface View {
 }
 
 interface UiState {
-  tool: Tool;
+  tool: ToolId;
   selection: Selection;
   connectFrom: Id | null;
   view: View;
@@ -38,7 +39,7 @@ interface UiState {
   setEditingLabel: (id: Id | null) => void;
   setShapeDraft: (pts: Point[] | null) => void;
 
-  setTool: (t: Tool) => void;
+  setTool: (t: ToolId) => void;
   select: (sel: Partial<Selection>) => void;
   clearSelection: () => void;
   setConnectFrom: (id: Id | null) => void;

@@ -10,10 +10,6 @@ export function radiusFromArea(areaSf: number): number {
   return Math.sqrt(Math.max(0, areaSf) / Math.PI);
 }
 
-export function isCircle(node: BubbleNode): boolean {
-  return node.shape.kind === 'circle';
-}
-
 /** Radius for circles; 0 for shapes without one (use nodeSize for a characteristic size). */
 export function shapeSize(shape: Shape): number {
   switch (shape.kind) {

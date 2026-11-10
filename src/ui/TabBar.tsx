@@ -1,8 +1,16 @@
 import { useEffect, useRef, useState } from 'react';
 import { useDoc } from '../store/documentStore';
-import { closeTab, moveTab, newTab, renameTab, switchTab, tabName, useWorkspace } from '../store/workspaceStore';
 import { useUi } from '../store/uiStore';
-import { reopenClosedTab } from '../store/workspaceStore';
+import {
+  closeTab,
+  moveTab,
+  newTab,
+  renameTab,
+  reopenClosedTab,
+  switchTab,
+  tabName,
+  useWorkspace,
+} from '../store/workspaceStore';
 
 /** Browser-style tabs: one diagram per tab. */
 export function TabBar() {

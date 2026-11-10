@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { createCategory, createConnection, createNode, createProject } from '../src/model/factory';
-import { buildClip, clipStyle, overlapKey, parseClip, planPaste } from '../src/io/clipboard';
+import { buildClip, clipStyle, parseClip, planPaste } from '../src/io/clipboard';
+import { overlapKey } from '../src/model/overlaps';
 
 function setup() {
   const p = createProject();

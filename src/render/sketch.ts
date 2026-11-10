@@ -14,7 +14,9 @@ export interface Pt {
   y: number;
 }
 
-export type FillStyle = 'flat' | 'wash' | 'hatch' | 'pencil';
+import type { FillStyle, Paper } from '../model/types';
+
+export type { FillStyle, Paper };
 
 export interface SketchParams {
   /** 0..1 out-of-roundness / low-frequency hand wobble */
@@ -235,16 +237,6 @@ export function dashSplit(pts: Pt[], on: number, off: number): Pt[][] {
   }
   if (drawing && cur.length > 1) out.push(cur);
   return out;
-}
-
-export function polygonArea(pts: Pt[]): number {
-  let a = 0;
-  for (let i = 0; i < pts.length; i++) {
-    const p = pts[i];
-    const q = pts[(i + 1) % pts.length];
-    a += p.x * q.y - q.x * p.y;
-  }
-  return a / 2;
 }
 
 /** Even-odd intervals where the infinite line p + t*d is inside the polygon(s). */
@@ -544,8 +536,6 @@ export interface Preset {
   params: SketchParams;
   paper: Paper;
 }
-
-export type Paper = 'none' | 'trace' | 'warm';
 
 export const PRESETS: Preset[] = [
   { id: 'clean', label: 'Clean', paper: 'none', params: CLEAN },

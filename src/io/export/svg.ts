@@ -21,7 +21,7 @@ export interface ExportOptions {
   nodeIds?: string[];
 }
 
-export const DEFAULT_EXPORT_OPTIONS: ExportOptions = { includeGrid: false, includeScaleBar: true, marginIn: 0.5 };
+const DEFAULT_EXPORT_OPTIONS: ExportOptions = { includeGrid: false, includeScaleBar: true, marginIn: 0.5 };
 
 export interface SvgResult {
   svg: string;

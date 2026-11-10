@@ -3,11 +3,12 @@ import type { Point } from '../../model/types';
 import { boundsCenter, nodeBounds, unionBounds } from '../../model/geometry';
 import { pxPerFt } from '../../model/units';
 import { getDoc } from '../documentStore';
+import { MAX_ZOOM, MIN_ZOOM } from '../uiStore';
 import { ui } from './shared';
 
 export function zoomAt(screen: Point, factor: number) {
   const { view } = ui();
-  const zoom = Math.min(32, Math.max(0.05, view.zoom * factor));
+  const zoom = Math.min(MAX_ZOOM, Math.max(MIN_ZOOM, view.zoom * factor));
   const ratio = zoom / view.zoom;
   ui().setView({
     zoom,
@@ -37,7 +38,7 @@ export function zoomToFit() {
   const k1 = pxPerFt(doc.settings.scale, 1);
   const zx = (stageSize.width - pad * 2) / ((b.maxX - b.minX) * k1);
   const zy = (stageSize.height - pad * 2) / ((b.maxY - b.minY) * k1);
-  centerOn(boundsCenter(b), Math.min(4, Math.max(0.05, Math.min(zx, zy))));
+  centerOn(boundsCenter(b), Math.min(4, Math.max(MIN_ZOOM, Math.min(zx, zy))));
 }
 
 export function viewCenterWorld(): Point {

@@ -5,6 +5,7 @@ import { pointer } from '../canvas/pointer';
 import { DUPLICATE_OFFSET_FT } from '../model/defaults';
 import { buildClip, clipStyle, parseClip, planPaste, type ClipPayload } from './clipboard';
 import { buildImport, parseCsv } from './csvImport';
+import { isTextEntry } from '../ui/focus';
 
 /** In-memory fallback when the system clipboard is unavailable. */
 let lastClip: { text: string; pastes: number } | null = null;
@@ -14,22 +15,13 @@ export function armPasteStyle() {
   pasteStyleArmedAt = Date.now();
 }
 
-function isTyping(): boolean {
-  const t = document.activeElement as HTMLElement | null;
-  if (!t) return false;
-  if (t.tagName === 'TEXTAREA' || t.isContentEditable) return true;
-  return (
-    t.tagName === 'INPUT' && !['checkbox', 'radio', 'range', 'color', 'button'].includes((t as HTMLInputElement).type)
-  );
-}
-
 function copyText(): string | null {
   const clip = buildClip(getDoc(), useUi.getState().selection.nodes);
   return clip ? JSON.stringify(clip) : null;
 }
 
 function onCopy(e: ClipboardEvent, cut: boolean) {
-  if (isTyping() || useUi.getState().exportOpen) return;
+  if (isTextEntry(document.activeElement) || useUi.getState().exportOpen) return;
   const text = copyText();
   if (!text) return;
   e.preventDefault();
@@ -116,7 +108,7 @@ function pasteTable(text: string): boolean {
 }
 
 function onPaste(e: ClipboardEvent) {
-  if (isTyping() || useUi.getState().exportOpen) return;
+  if (isTextEntry(document.activeElement) || useUi.getState().exportOpen) return;
   const text = e.clipboardData?.getData('text/plain') || lastClip?.text || '';
   const clip = parseClip(text);
   if (clip) {

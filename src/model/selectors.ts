@@ -1,4 +1,4 @@
-import type { BubbleNode, Connection, Project, StyleKey, StyleProps } from './types';
+import type { BubbleNode, Connection, Project, StyleProps } from './types';
 import { AUTO_STROKE_DARKEN } from './defaults';
 import { darken } from './color';
 import { nodeArea, shapeSize } from './geometry';
@@ -19,18 +19,6 @@ export function resolveStyle(node: BubbleNode, project: Project): ResolvedStyle 
   return { ...s, stroke: s.stroke ?? darken(s.fill, AUTO_STROKE_DARKEN) };
 }
 
-export function resolveFill(node: BubbleNode, project: Project): string {
-  return resolveStyle(node, project).fill;
-}
-
-export function resolveStroke(node: BubbleNode, project: Project): string {
-  return resolveStyle(node, project).stroke;
-}
-
-export function isOverridden(node: BubbleNode, key: StyleKey): boolean {
-  return node.style[key] !== undefined;
-}
-
 export function secondaryLabel(node: BubbleNode, project: Project, style = resolveStyle(node, project)): string | null {
   switch (style.labelSecondary) {
     case 'radius':
@@ -46,10 +34,6 @@ export function secondaryLabel(node: BubbleNode, project: Project, style = resol
 
 export function orderedNodes(project: Project): BubbleNode[] {
   return project.nodeOrder.map((id) => project.nodes[id]).filter(Boolean);
-}
-
-export function connectionsList(project: Project): Connection[] {
-  return Object.values(project.connections);
 }
 
 export function totalArea(project: Project, ids?: string[]): number {

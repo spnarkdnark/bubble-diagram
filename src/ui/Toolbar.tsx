@@ -1,6 +1,6 @@
 import type { ReactNode } from 'react';
 import { useDoc, useDocument } from '../store/documentStore';
-import { useUi, type Tool } from '../store/uiStore';
+import { useUi, type ToolId } from '../store/uiStore';
 import * as A from '../store/actions';
 import { SCALES } from '../model/units';
 import { GRID_SPACINGS_FT } from '../model/defaults';
@@ -8,7 +8,17 @@ import type { ScaleId } from '../model/types';
 import { FileMenu } from './FileMenu';
 import { PRESET_OPTIONS } from './panels/GraphicPanel';
 
-function ToolButton({ tool, label, shortcut, icon }: { tool: Tool; label: string; shortcut: string; icon: ReactNode }) {
+function ToolButton({
+  tool,
+  label,
+  shortcut,
+  icon,
+}: {
+  tool: ToolId;
+  label: string;
+  shortcut: string;
+  icon: ReactNode;
+}) {
   const active = useUi((s) => s.tool === tool);
   return (
     <button
