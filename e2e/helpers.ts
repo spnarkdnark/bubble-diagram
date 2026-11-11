@@ -61,6 +61,11 @@ export function field(page: Page, label: string) {
   return page.locator(`.sidebar .field:has(.field-label:text-is("${label}")) input`).first();
 }
 
+/** Sidebar dropdown whose field label is exactly `label`. */
+export function select(page: Page, label: string) {
+  return page.locator(`.sidebar .field:has(.field-label:text-is("${label}")) select`).first();
+}
+
 export async function importSampleCsv(page: Page) {
   await page.getByRole('button', { name: 'File ▾' }).click();
   const [chooser] = await Promise.all([

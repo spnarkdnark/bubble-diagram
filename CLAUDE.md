@@ -48,12 +48,15 @@ react-konva canvas, Zustand + Immer state. No UI framework; plain CSS with token
 ```
 src/model/    pure TS: types, units, geometry (all shape-kind switches), color,
               defaults, factory, selectors (resolveStyle…), migrate, overlaps,
-              standards (shared categories), polygon (area/contains/centroid),
+              standards (shared library + firm defaults), categories (matching by
+              name: the one rule for files, paste, CSV, reset), polygon,
               blob/ (geometry.ts resolve+sample, build.ts from input, edit.ts points)
 src/store/    history.ts (pure undo stack), documentStore (active tab's undoable
               Project), uiStore (selection/tool/view, NOT undoable), workspaceStore
               (tabs + standards sync), standardsStore, actions/ (all document ops,
-              one file per area; index.ts re-exports: import * as A from 'store/actions')
+              one file per area: nodes, size (circles/rectangles), blobs (freeform),
+              categories, styles, connections, overlaps, graphic, settings, view,
+              selection; index.ts re-exports: import * as A from 'store/actions')
 src/render/   scene.ts (Project -> primitives: nodes, labels, connections),
               overlapScene.ts (overlap treatments), primitives.ts (Prim types +
               helpers), drawCanvas.ts, sketch.ts (hand-drawn geometry + presets),
@@ -66,14 +69,15 @@ src/canvas/   CanvasStage (stage + layers only), OverlayLayer (selection, handle
               textLayout, LabelEditor, pointer, layers/GridLayer
 src/ui/       TabBar, Toolbar, FileMenu, ScaleBar, ExportDialog, Toast, focus.ts,
               controls/ (shared inputs), panels/ (PropertiesPanel composes: BubbleProps
-              + StyleFields, ConnectionProps, OverlapProps, DrawingPanel, GraphicPanel,
+              + SizeFields + StyleFields, ConnectionProps, OverlapProps, DrawingPanel, GraphicPanel,
               OverlapSettingsPanel, ShortcutsHelp, CategoryPanel)
 src/io/       fileActions (New/Open/Save/Import CSV), projectFile (JSON),
               clipboard + clipboardActions, autosave, csvImport, autoLayout,
               download, export/ (svg.ts is the single exporter; png/pdf build on it)
 src/hooks/    useKeyboardShortcuts
 tests/        Vitest unit tests (render-regression.test.ts guards scene output)
-e2e/          Playwright, one spec per feature area (helpers.ts: fixtures, readers)
+e2e/          Playwright, one spec per feature area (helpers.ts: fixtures, readers,
+              field()/select() for sidebar inputs by label)
 ```
 
 ## Data model (src/model/types.ts)
@@ -130,14 +134,16 @@ shared library for all tabs
   and `setStandardsEverywhere` rewrites every other tab's whole undo history, so undo in
   another tab can never restore an old category style. The editing tab keeps its own
   history (its undo can revert its edit, which then propagates).
-- New tabs, opened files and restored tabs go through `adoptProject`: match by id, then
-  by name; the standards' styles (and graphic style) win; unknown categories join the
+- New tabs, opened files and restored tabs go through `adoptProject`: categories match via
+  `model/categories.ts` (same id + name, else name ignoring case — use it for any new
+  import path); the standards' styles (and graphic style) win; unknown categories join the
   standards. Paste and CSV import add unknown categories to the active tab, and the sync
   then adds them to the standards everywhere.
 - Firm defaults (fresh workspace, new projects): `DEFAULT_CATEGORIES` in `model/defaults.ts`
   (Garage, Public, Bedroom, Service, Exterior: 3 pt auto outline, 10 pt #333 labels).
   A saved workspace keeps its own standards; Category standards → Reset
-  (`actions.resetStandards`) restores the defaults everywhere, matching categories by name.
+  (`actions.resetStandards` → pure `standards.withFirmDefaults`) restores the defaults
+  everywhere, matching categories by name.
 - Adding another shared setting: put it in `Standards` (`standardsOf`, `hasStandards`,
   `applyStandards`) and `io/autosave.ts#readStandards`; sync and adoption follow.
 
@@ -187,7 +193,8 @@ Hand fonts are bundled via @fontsource; exports outline them with opentype.js
   (default 6"; Shift = 1"); Ctrl/⌘+wheel (and trackpad pinch) always zooms.
 - Pan: Space+drag or middle mouse. Marquee: drag on empty canvas (Shift adds).
 - Resize handle (circle: right edge; rectangle: bottom-right corner, proportional) snaps the
-  half-extent to `settings.snap.radiusIncrementFt`; Shift = free.
+  half-extent to `settings.snap.radiusIncrementFt` (stored name kept for old files; the UI
+  calls it "Size snap"); Shift = free. Minimum half-extent: `MIN_SIZE_FT`.
 - Sidebar (sizing actions in `store/actions/size.ts`): Shape (convert, keeps area); a
   circle by radius, diameter or area; a rectangle by width, height (unlocks rectangles)
   or area. Area is exact (unsnapped) and keeps proportions; multi-select applies to each.
@@ -229,8 +236,9 @@ Every feature: add/extend a unit test for pure logic, add an e2e test in the mat
   in `model/geometry.ts` to complete: `nodeOutline` (a polygon; drawing, hit-testing,
   marquee and connections come from it), area/size/handle cases, `labelWidthFt`. Then
   `cleanShape` in `model/migrate.ts`, `dimensionText` in `selectors.ts`, a row in
-  `SIZABLE_SHAPES` (toolbar picker, sidebar Shape field, B cycling), `newShape` /
-  `convertShape`, an icon in `ui/Toolbar.tsx`, and CSV names in `io/csvImport.ts`.
+  `SHAPE_LABELS` in `model/defaults.ts` and `BUBBLE_ICONS` in `ui/Toolbar.tsx` (both
+  typed `Record<SizableKind, …>`, so TypeScript asks for them), `newShape` / `convertShape`,
+  its fields in `ui/panels/SizeFields.tsx`, and CSV names in `io/csvImport.ts`.
   Sketch mode keeps corners via `primitives.subdivide`; smooth outlines use `resample`.
 - **New canvas tool**: implement `Tool` in `canvas/tools/<name>.ts` (return a `Gesture`
   from `down` for drags), register it in `tools/index.ts` and `ToolId` in uiStore, add a
@@ -243,8 +251,8 @@ Every feature: add/extend a unit test for pure logic, add an e2e test in the mat
 
 ## Testing notes
 
-- Unit tests (51): units, geometry, squares/rectangles, history, project file + v1 migration, CSV, styles,
-  standards, clipboard, overlaps, sketch determinism, blobs, render regression.
+- Unit tests (53): units, geometry, squares/rectangles, history, project file + v1 migration, CSV, styles,
+  standards + category matching + firm defaults, clipboard, overlaps, sketch determinism, blobs, render regression.
 - e2e (21, one file per area): bubbles (scale, drag/resize/wheel, selection + undo,
   connect, sizing, names, in-place area, squares), styles + category/graphic/overlap standards + reset, clipboard (+ paste adds categories), overlaps, shapes, tabs, io.
 - Canvas hit-testing is geometric (`canvas/query.ts`, `canvas/hitTest.ts`); Konva layers

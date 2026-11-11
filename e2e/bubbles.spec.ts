@@ -1,4 +1,4 @@
-import { doc, expect, field, nodes, test, ui } from './helpers';
+import { doc, expect, field, nodes, select, test, ui } from './helpers';
 
 test('a 10 ft bubble is 120 px across its radius at 1/8" and 100%', async ({ page, canvas }) => {
   await canvas.bubble(400, 300);
@@ -157,7 +157,7 @@ test('squares: place, corner hit, corner resize, width/height, convert keeping a
   [n] = await nodes(page);
   expect(n.shape).toEqual({ kind: 'rect', widthFt: 30, heightFt: 12 });
   // converting keeps the area
-  await page.locator('.sidebar .field:has(.field-label:text-is("Shape")) select').selectOption('circle');
+  await select(page, 'Shape').selectOption('circle');
   [n] = await nodes(page);
   expect(Math.PI * n.shape.radiusFt ** 2).toBeCloseTo(360, 6);
   // B, then B again, switches what the bubble tool places

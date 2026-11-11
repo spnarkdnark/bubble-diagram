@@ -1,8 +1,8 @@
-import { doc, expect, field, nodes, test } from './helpers';
+import { doc, expect, field, nodes, select, test } from './helpers';
 
 test('category style flows to bubbles; overrides show a reset dot', async ({ page, canvas }) => {
   await canvas.bubble(400, 300);
-  await page.locator('.sidebar .field:has-text("Category") select').selectOption({ label: 'Service' });
+  await select(page, 'Category').selectOption({ label: 'Service' });
   await canvas.click(1000, 700);
   const service = page.locator('.category-list > li').nth(3);
   await service.locator('.chev').click();
@@ -82,7 +82,7 @@ test('overlap defaults are shared across tabs; Reset restores the firm defaults'
   await canvas.bubble(400, 300);
   await canvas.click(1000, 700);
   const settings = async () => (await doc(page)).settings;
-  const treatment = page.locator('.sidebar .field:has(.field-label:text-is("Treatment")) select');
+  const treatment = select(page, 'Treatment');
   await treatment.selectOption('lens');
   await page.locator('.tab-new').click();
   expect((await settings()).overlap.mode).toBe('lens');

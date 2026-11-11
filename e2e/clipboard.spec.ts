@@ -1,4 +1,4 @@
-import { doc, expect, nodes, test } from './helpers';
+import { doc, expect, nodes, select, test } from './helpers';
 
 test('copy/paste at the cursor, paste style, and pasting table rows', async ({ page, canvas }) => {
   await page.context().grantPermissions(['clipboard-read', 'clipboard-write']);
@@ -34,7 +34,7 @@ test('pasting a category the standards lack adds it to every tab', async ({ page
   await page.context().grantPermissions(['clipboard-read', 'clipboard-write']);
   const catNames = async () => (Object.values((await doc(page)).categories) as any[]).map((c) => c.name);
   await canvas.bubble(400, 300);
-  await page.locator('.sidebar .field:has(.field-label:text-is("Category")) select').selectOption({ label: 'Public' });
+  await select(page, 'Category').selectOption({ label: 'Public' });
   await page.keyboard.press('Control+c');
   // the same bubble as if copied from a file whose category is "Lab"
   await page.evaluate(async () => {
