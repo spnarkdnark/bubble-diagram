@@ -24,7 +24,7 @@ interface SavedWorkspace {
 
 /**
  * Validate saved standards by running them through the project migrator. Saves from
- * before the graphic style was shared keep the active tab's graphic style.
+ * before the graphic/overlap settings were shared keep the active tab's.
  */
 function readStandards(raw: unknown, active: Project | undefined): Standards | undefined {
   if (!raw || typeof raw !== 'object') return undefined;
@@ -35,7 +35,11 @@ function readStandards(raw: unknown, active: Project | undefined): Standards | u
       nodes: {},
       categories: r.categories,
       categoryOrder: r.categoryOrder,
-      settings: { defaultStyle: r.defaultStyle, graphic: r.graphic ?? active?.settings.graphic },
+      settings: {
+        defaultStyle: r.defaultStyle,
+        graphic: r.graphic ?? active?.settings.graphic,
+        overlap: r.overlap ?? active?.settings.overlap,
+      },
     });
     return standardsOf(p);
   } catch {

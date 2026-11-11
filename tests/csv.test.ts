@@ -26,7 +26,7 @@ Bad,,Service,
     const { nodes, categories } = buildImport(p, rows, { x: 0, y: 0 });
     expect(categories.map((c) => c.name)).toEqual(['Lab']);
     expect(nodes[3].categoryId).toBe(categories[0].id);
-    expect(nodes[0].categoryId).toBe(p.categoryOrder[0]);
+    expect(p.categories[nodes[0].categoryId!].name).toBe('Public');
     for (let i = 0; i < nodes.length; i++)
       for (let j = i + 1; j < nodes.length; j++) {
         const d = Math.hypot(nodes[i].x - nodes[j].x, nodes[i].y - nodes[j].y);

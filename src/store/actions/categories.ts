@@ -1,6 +1,6 @@
-/** Categories and the uncategorized default style. */
+/** Categories, the uncategorized default style, and resetting the standards. */
 import type { Id, StyleKey, StyleProps } from '../../model/types';
-import { createCategory, nextCategoryColor } from '../../model/factory';
+import { createCategory, createProject, nextCategoryColor } from '../../model/factory';
 import { getDoc } from '../documentStore';
 import { commit } from './shared';
 
@@ -46,5 +46,36 @@ export function deleteCategory(id: Id) {
     }
     delete d.categories[id];
     d.categoryOrder = d.categoryOrder.filter((c) => c !== id);
+  });
+}
+
+/**
+ * Restore the firm defaults (categories, default style, graphic + overlap settings);
+ * the sync then applies them to every tab. Categories match by name so bubbles keep
+ * theirs; other categories stay only if this diagram uses them. One undo step.
+ */
+export function resetStandards() {
+  const fresh = createProject();
+  commit((d) => {
+    const key = (s: string) => s.trim().toLowerCase();
+    const byName = new Map(d.categoryOrder.map((id) => [key(d.categories[id].name), id]));
+    const used = new Set(Object.values(d.nodes).map((n) => n.categoryId));
+    const categories: typeof d.categories = {};
+    const order: Id[] = [];
+    for (const c of fresh.categoryOrder.map((id) => fresh.categories[id])) {
+      const id = byName.get(key(c.name)) ?? c.id;
+      categories[id] = { ...c, id };
+      order.push(id);
+    }
+    for (const id of d.categoryOrder)
+      if (!categories[id] && used.has(id)) {
+        categories[id] = d.categories[id];
+        order.push(id);
+      }
+    d.categories = categories;
+    d.categoryOrder = order;
+    d.settings.defaultStyle = fresh.settings.defaultStyle;
+    d.settings.graphic = fresh.settings.graphic;
+    d.settings.overlap = fresh.settings.overlap;
   });
 }

@@ -14,7 +14,8 @@ const MODE_OPTIONS = (Object.keys(OVERLAP_MODE_LABELS) as OverlapMode[]).map((m)
 export function OverlapSettingsPanel() {
   const ov = useDoc().settings.overlap;
   return (
-    <Section title="Overlaps">
+    <Section title="Overlap standards">
+      <p className="tip flush">Shared by every tab. Individual overlaps can still be changed by clicking their ◇.</p>
       <Field label="Treatment">
         <SelectField<OverlapMode>
           value={ov.mode}

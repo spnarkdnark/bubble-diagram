@@ -61,3 +61,23 @@ describe('graphic standards', () => {
     expect(applyStandards(project, s)).toBe(project);
   });
 });
+
+describe('firm defaults', () => {
+  it('a new diagram starts with the firm categories', () => {
+    const p = createProject();
+    const cats = p.categoryOrder.map((id) => p.categories[id]);
+    expect(cats.map((c) => c.name)).toEqual(['Garage', 'Public', 'Bedroom', 'Service', 'Exterior']);
+    expect(cats.map((c) => c.style.fill)).toEqual(['#baffc9', '#ffffba', '#bae1ff', '#ffb3ba', '#ffdfba']);
+    for (const c of cats) {
+      expect(c.style).toMatchObject({ stroke: null, strokeWeightPt: 3, labelSizePt: 10, labelColor: '#333333' });
+      expect(c.style.strokeStyle).toBe(c.name === 'Exterior' ? 'dashed' : 'solid');
+    }
+  });
+
+  it('overlap defaults are part of the standards', () => {
+    const lib = createProject();
+    lib.settings.overlap = { ...lib.settings.overlap, mode: 'lens', weightPt: 1 };
+    const out = applyStandards(createProject(), standardsOf(lib));
+    expect(out.settings.overlap).toEqual(lib.settings.overlap);
+  });
+});

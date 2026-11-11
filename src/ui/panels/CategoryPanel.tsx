@@ -30,9 +30,26 @@ export function CategoryPanel() {
     <Section
       title="Category standards"
       actions={
-        <button className="btn ghost small" onClick={() => setOpen(A.addCategory())}>
-          + Add
-        </button>
+        <>
+          <button
+            className="btn ghost small"
+            title="Restore the firm's default categories, graphic style and overlap settings"
+            onClick={() => {
+              if (
+                window.confirm(
+                  'Reset categories, graphic style and overlap settings to the firm defaults in every tab? ' +
+                    'Bubbles keep their categories by name. You can undo.',
+                )
+              )
+                A.resetStandards();
+            }}
+          >
+            Reset
+          </button>
+          <button className="btn ghost small" onClick={() => setOpen(A.addCategory())}>
+            + Add
+          </button>
+        </>
       }
     >
       <p className="tip flush">Shared by every tab. Changes here apply to all open diagrams and new ones.</p>

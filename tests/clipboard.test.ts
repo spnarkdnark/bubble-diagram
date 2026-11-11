@@ -35,10 +35,10 @@ describe('clipboard', () => {
     const other = createProject();
     const plan = planPaste(other, clip, { x: 0, y: 0 });
     expect(plan.categories).toHaveLength(0);
-    expect(other.categories[plan.nodes[0].categoryId!].name).toBe('Public');
+    expect(other.categories[plan.nodes[0].categoryId!].name).toBe(p.categories[a.categoryId!].name);
     const empty = { ...createProject(), categories: {}, categoryOrder: [] };
     const plan2 = planPaste(empty, clip, { x: 0, y: 0 });
-    expect(plan2.categories.map((c) => c.name)).toEqual(['Public']);
+    expect(plan2.categories.map((c) => c.name)).toEqual([p.categories[a.categoryId!].name]);
   });
   it('drops connections to nodes not copied; paste style keeps look', () => {
     const { p, a, cat } = setup();

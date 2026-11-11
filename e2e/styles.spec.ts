@@ -4,7 +4,7 @@ test('category style flows to bubbles; overrides show a reset dot', async ({ pag
   await canvas.bubble(400, 300);
   await page.locator('.sidebar .field:has-text("Category") select').selectOption({ label: 'Service' });
   await canvas.click(1000, 700);
-  const service = page.locator('.category-list > li').nth(2);
+  const service = page.locator('.category-list > li').nth(3);
   await service.locator('.chev').click();
   const weight = page.locator('.category-style .field:has-text("Weight") input');
   await weight.fill('3');
@@ -29,7 +29,7 @@ test('category styles are shared standards across tabs, and undo elsewhere canno
     return (Object.values(d.categories) as any[]).find((c) => c.name === 'Public').style;
   };
   const setPublicWeight = async (pt: string) => {
-    const row = page.locator('.category-list > li').nth(0);
+    const row = page.locator('.category-list > li').nth(1); // Public
     if ((await page.locator('.category-style').count()) === 0) await row.locator('.chev').click();
     const weight = page.locator('.category-style .field:has-text("Weight") input');
     await weight.fill(pt);
@@ -76,4 +76,30 @@ test('the graphic style is a shared standard across tabs', async ({ page, canvas
   await page.reload();
   await page.waitForSelector('.canvas canvas');
   expect((await graphic()).preset).toBe('marker');
+});
+
+test('overlap defaults are shared across tabs; Reset restores the firm defaults', async ({ page, canvas }) => {
+  await canvas.bubble(400, 300);
+  await canvas.click(1000, 700);
+  const settings = async () => (await doc(page)).settings;
+  const treatment = page.locator('.sidebar .field:has(.field-label:text-is("Treatment")) select');
+  await treatment.selectOption('lens');
+  await page.locator('.tab-new').click();
+  expect((await settings()).overlap.mode).toBe('lens');
+  // change some standards, then reset them from the category panel
+  await page.locator('label[title="Graphic style"] select').selectOption('pencil');
+  page.once('dialog', (d) => d.accept());
+  await page.getByRole('button', { name: 'Reset', exact: true }).click();
+  expect((await settings()).overlap.mode).toBe('merge');
+  expect((await settings()).graphic.preset).toBe('clean');
+  await page.locator('.tab').nth(0).click();
+  expect((await settings()).overlap.mode).toBe('merge');
+  const d = await doc(page);
+  expect(d.categoryOrder.map((id: string) => d.categories[id].name)).toEqual([
+    'Garage',
+    'Public',
+    'Bedroom',
+    'Service',
+    'Exterior',
+  ]);
 });

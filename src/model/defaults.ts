@@ -42,15 +42,18 @@ export function styleWithFill(fill: string, extra: Partial<StyleProps> = {}): St
 
 export const EXTERIOR_CATEGORY = 'Exterior';
 
+/** Firm category look: auto outline (darker fill) at 3 pt, 10 pt dark gray labels. */
+function firmStyle(fill: string, extra: Partial<StyleProps> = {}): StyleProps {
+  return styleWithFill(fill, { stroke: null, strokeWeightPt: 3, labelSizePt: 10, labelColor: '#333333', ...extra });
+}
+
+/** The firm's standard categories, in this order, for a fresh workspace (and "Reset to firm defaults"). */
 export const DEFAULT_CATEGORIES: { name: string; style: StyleProps }[] = [
-  { name: 'Public', style: styleWithFill(CATEGORY_PALETTE[0]) },
-  { name: 'Private', style: styleWithFill(CATEGORY_PALETTE[2]) },
-  { name: 'Service', style: styleWithFill(CATEGORY_PALETTE[1]) },
-  { name: 'Staff', style: styleWithFill(CATEGORY_PALETTE[3]) },
-  {
-    name: EXTERIOR_CATEGORY,
-    style: styleWithFill('#cfdcc4', { fillOpacity: 0.55, strokeStyle: 'dashed', labelBold: false }),
-  },
+  { name: 'Garage', style: firmStyle('#baffc9') },
+  { name: 'Public', style: firmStyle('#ffffba') },
+  { name: 'Bedroom', style: firmStyle('#bae1ff') },
+  { name: 'Service', style: firmStyle('#ffb3ba') },
+  { name: EXTERIOR_CATEGORY, style: firmStyle('#ffdfba', { strokeStyle: 'dashed' }) },
 ];
 
 export const DEFAULT_RADIUS_FT = 10;
