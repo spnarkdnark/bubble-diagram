@@ -83,9 +83,16 @@ Schema v2 (v1 files upgrade in `migrate.ts`).
 
 - `BubbleNode { id, name, x, y, shape, categoryId, style }` — x/y = center (circles) or
   the origin free blob points are relative to.
-- `shape` is a tagged union: `{kind:'circle', radiusFt}` | `{kind:'blob', points, gapFt}`.
-  Node-level geometry functions take `project`, because blob geometry depends on other
-  bubbles.
+- `shape` is a tagged union: `{kind:'circle', radiusFt}` | `{kind:'rect', widthFt, heightFt}`
+  (centered on x/y; a square when equal) | `{kind:'blob', points, gapFt}`. Node-level
+  geometry functions take `project`, because blob geometry depends on other bubbles.
+- **Sizable shapes** (`SizableKind` = circle | rect; `geometry.isSizable`): placed by the
+  bubble tool, resizable, sized by area, convertible (`convertShape` keeps the area).
+  Their common "size" is the half-extent (`shapeSize`: radius / half-width), so the
+  radius snap, wheel step and handle work the same for every kind. Everything except
+  circles is drawn and hit-tested from `geometry.nodeOutline` (a polygon).
+- Overlap treatments and blob ring-snapping/pockets are circles only; rectangles simply
+  stack.
 - **Styles**: `Category.style` and `settings.defaultStyle` are full `StyleProps`
   (fill, opacity, outline color/weight/style, label size/color/bold/secondary,
   sketchAmount). `node.style` holds only overrides (`Partial<StyleProps>`).
@@ -159,7 +166,8 @@ Hand fonts are bundled via @fontsource; exports outline them with opentype.js
 
 ## Interaction summary
 
-- Tools: V select, B bubble (click to place), C connect (click A then B, or drag A→B;
+- Tools: V select, B bubble (click to place; the toolbar picker or B again switches circle /
+  square), C connect (click A then B, or drag A→B;
   Esc exits), S shape (drag freehand or click points; Enter/double-click/first point
   closes; double-click a gap between bubbles to fill the pocket).
 - Selected shape: drag control points (snap to rings; Alt = no snap), double-click a
@@ -169,17 +177,20 @@ Hand fonts are bundled via @fontsource; exports outline them with opentype.js
   element, or double-click either, to edit it in place (`canvas/LabelEditor.tsx`,
   `uiStore.editingLabel = {id, part: 'name'|'size'}`, `query.labelAt`). Enter saves,
   Shift+Enter breaks a name's line, Esc cancels, blur saves. One undo step. The size line
-  edits whatever the label shows: area (exact radius = sqrt(area/π)) or radius
-  (`actions.setSizeFromText`); circles only, since a shape's area follows its outline.
+  edits whatever the label shows: area, a circle's radius or a rectangle's `W × H`
+  (`actions.setSizeFromText`); circles and rectangles only (a freeform shape's area
+  follows its outline).
 - Ctrl+C/X/V use native clipboard events (JSON text, works across tabs); paste goes
   to the cursor. Ctrl+Shift+V pastes the copied element's look onto the selection.
   Pasting tab/comma-separated rows with a header imports bubbles.
 - Wheel: zoom at cursor. Wheel over a selected bubble resizes it by the radius snap
   (default 6"; Shift = 1"); Ctrl/⌘+wheel (and trackpad pinch) always zooms.
 - Pan: Space+drag or middle mouse. Marquee: drag on empty canvas (Shift adds).
-- Resize handle snaps radius to `settings.snap.radiusIncrementFt`; Shift = free.
-- Sidebar: a circle can be sized by radius, diameter or area (area sets radius =
-  sqrt(area/π), unsnapped so the sf is exact); multi-select applies to each circle.
+- Resize handle (circle: right edge; rectangle: bottom-right corner, proportional) snaps the
+  half-extent to `settings.snap.radiusIncrementFt`; Shift = free.
+- Sidebar (sizing actions in `store/actions/size.ts`): Shape (convert, keeps area); a
+  circle by radius, diameter or area; a rectangle by width, height (unlocks rectangles)
+  or area. Area is exact (unsnapped) and keeps proportions; multi-select applies to each.
 - Shortcuts: Del, ⌘/Ctrl+D, ⌘/Ctrl+A, arrows (1', Shift 10'), ⌘/Ctrl+Z / Shift+Z / Y,
   ⌘/Ctrl+S save, F zoom to fit, ⌘/Ctrl+0 100% (true paper size). Keep
   `ui/panels/ShortcutsHelp.tsx` in sync.
@@ -187,8 +198,8 @@ Hand fonts are bundled via @fontsource; exports outline them with opentype.js
 ## CSV import
 
 Columns (case-insensitive, aliases in `csvImport.ts`): `name`, `radius`, `category`,
-optional `area`. Radius accepts `12.5`, `12'`, `12'-6"`; area accepts `1200`, `1,200 sf`.
-Radius wins if both are given; otherwise radius = sqrt(area/π). Unknown categories are
+optional `area` and `shape` (circle | square; a square's radius = half its side). Radius accepts `12.5`, `12'`, `12'-6"`; area accepts `1200`, `1,200 sf`.
+Radius wins if both are given; otherwise radius = sqrt(area/π) (squares: side = sqrt(area)). Unknown categories are
 created with the next palette color. Imported bubbles go in a loose grid below existing
 content (`autoLayout.ts`). Sample: `examples/sample-program.csv`.
 
@@ -213,10 +224,14 @@ Every feature: add/extend a unit test for pure logic, add an e2e test in the mat
 - **New drawing setting**: field in `DrawingSettings` + `DEFAULT_SETTINGS`; check that
   `migrateProject` fills it for old files (nested objects need an explicit merge there);
   an action in `store/actions/settings.ts`; a control in the relevant panel.
-- **New shape kind** (ellipse, rounded rectangle): extend the `Shape` union; TypeScript
-  then flags every `switch (shape.kind)` in `model/geometry.ts` to complete. Then
-  `nodeScene` in `render/scene.ts`, `cleanShape` in `model/migrate.ts`, and a tool or
-  a way to create it.
+- **New shape kind** (hexagon, ellipse, rounded rectangle): extend the `Shape` union (and
+  `SizableKind` if the bubble tool should place it); TypeScript then flags every switch
+  in `model/geometry.ts` to complete: `nodeOutline` (a polygon; drawing, hit-testing,
+  marquee and connections come from it), area/size/handle cases, `labelWidthFt`. Then
+  `cleanShape` in `model/migrate.ts`, `dimensionText` in `selectors.ts`, a row in
+  `SIZABLE_SHAPES` (toolbar picker, sidebar Shape field, B cycling), `newShape` /
+  `convertShape`, an icon in `ui/Toolbar.tsx`, and CSV names in `io/csvImport.ts`.
+  Sketch mode keeps corners via `primitives.subdivide`; smooth outlines use `resample`.
 - **New canvas tool**: implement `Tool` in `canvas/tools/<name>.ts` (return a `Gesture`
   from `down` for drags), register it in `tools/index.ts` and `ToolId` in uiStore, add a
   toolbar button and a shortcut.
@@ -228,17 +243,18 @@ Every feature: add/extend a unit test for pure logic, add an e2e test in the mat
 
 ## Testing notes
 
-- Unit tests (44): units, geometry, history, project file + v1 migration, CSV, styles,
+- Unit tests (51): units, geometry, squares/rectangles, history, project file + v1 migration, CSV, styles,
   standards, clipboard, overlaps, sketch determinism, blobs, render regression.
-- e2e (20, one file per area): bubbles (scale, drag/resize/wheel, selection + undo,
-  connect, sizing, names, in-place area), styles + category/graphic/overlap standards + reset, clipboard (+ paste adds categories), overlaps, shapes, tabs, io.
+- e2e (21, one file per area): bubbles (scale, drag/resize/wheel, selection + undo,
+  connect, sizing, names, in-place area, squares), styles + category/graphic/overlap standards + reset, clipboard (+ paste adds categories), overlaps, shapes, tabs, io.
 - Canvas hit-testing is geometric (`canvas/query.ts`, `canvas/hitTest.ts`); Konva layers
   are `listening={false}`. Window-level move/up (input/useCanvasInput.ts) so drags
   continue outside the canvas.
 
 ## Out of scope for v1 (hooks left in place)
 
-- Ellipses / rounded rectangles: see "New shape kind" above.
+- More shapes (hexagon, ellipse, rounded rectangle): see "New shape kind" above.
+- Overlap treatments between rectangles/circles need polygon intersection (not built).
 - Metric: `settings.unitSystem`; formatting/parsing is confined to `units.ts`.
 - Layers / locking: reserved optional `layerId` / `locked` on `BubbleNode`.
 

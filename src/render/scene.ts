@@ -8,7 +8,7 @@
  */
 import type { BubbleNode, GraphicSettings, Id, Project } from '../model/types';
 import { resolveStyle, type ResolvedStyle } from '../model/selectors';
-import { connectionSegment, nodeCenter } from '../model/geometry';
+import { connectionSegment, nodeCenter, nodeOutline } from '../model/geometry';
 import { blobGeometry } from '../model/blob';
 import { CONNECTION_COLOR, CONNECTION_STYLES, dashPatternPt, LABEL_FONT_FAMILY } from '../model/defaults';
 import { darken } from '../model/color';
@@ -16,7 +16,16 @@ import { ptToFt } from '../model/units';
 import { findOverlaps, type Overlap } from '../model/overlaps';
 import { layoutLabel, measureEpoch, type LabelLayout } from '../canvas/textLayout';
 import { isClean, sampleCircle, scaleParams, sketchClosedStroke, sketchFill, type SketchParams } from './sketch';
-import { circleSamples, opsToPrims, openStrokePrims, resample, seeded, type Prim, type StrokeP } from './primitives';
+import {
+  circleSamples,
+  opsToPrims,
+  openStrokePrims,
+  resample,
+  seeded,
+  subdivide,
+  type Prim,
+  type StrokeP,
+} from './primitives';
 import { buildOverlays } from './overlapScene';
 
 export type { Paint, Prim, StrokeP } from './primitives';
@@ -107,23 +116,27 @@ function nodeScene(
       : undefined;
   const fillPaint = { color: style.fill, alpha: style.fillOpacity };
 
+  // circles are exact; every other shape is its outline polygon
+  const poly = blob ? blob.poly : nodeOutline(node, project);
   let fill: Prim[];
   let outline: Prim[];
   if (clean) {
-    if (node.shape.kind === 'circle') {
+    if (!poly && node.shape.kind === 'circle') {
       const r = node.shape.radiusFt;
       fill = [{ t: 'circle', cx: node.x, cy: node.y, r, fill: fillPaint }];
       outline = stroke ? [{ t: 'circle', cx: node.x, cy: node.y, r, stroke }] : [];
     } else {
-      const poly = blob!.poly;
-      fill = [{ t: 'path', pts: poly, closed: true, fill: fillPaint }];
-      outline = stroke ? [{ t: 'path', pts: poly, closed: true, stroke }] : [];
+      const pts = poly ?? [];
+      fill = [{ t: 'path', pts, closed: true, fill: fillPaint }];
+      outline = stroke ? [{ t: 'path', pts, closed: true, stroke }] : [];
     }
   } else {
     const ring =
-      node.shape.kind === 'circle'
+      !poly && node.shape.kind === 'circle'
         ? sampleCircle(node.x, node.y, node.shape.radiusFt, circleSamples(node.shape.radiusFt, ftPerPt))
-        : resample(blob!.poly, 1.5 * ftPerPt);
+        : node.shape.kind === 'blob'
+          ? resample(poly ?? [], 1.5 * ftPerPt) // smooth outline
+          : subdivide(poly ?? [], 1.5 * ftPerPt); // sharp corners
     const colors = { fill: style.fill, fillDark: darken(style.fill, 0.28), stroke: style.stroke };
     const opts = { params, seed: seeded(node.id, g.seed), unitsPerPt: ftPerPt };
     fill = opsToPrims(sketchFill(ring, opts), colors, style.fillOpacity);

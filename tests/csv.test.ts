@@ -12,7 +12,7 @@ Storage,8'-6",Service,
 Bad,,Service,
 `);
     expect(rows).toHaveLength(3);
-    expect(rows[0]).toEqual({ name: 'Lobby', radiusFt: 15, category: 'Public' });
+    expect(rows[0]).toEqual({ name: 'Lobby', radiusFt: 15, category: 'Public', kind: 'circle' });
     expect(rows[1].radiusFt).toBeCloseTo(radiusFromArea(1200), 2);
     expect(rows[2].radiusFt).toBe(8.5);
     expect(errors).toHaveLength(1);

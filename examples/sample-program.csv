@@ -1,12 +1,12 @@
-name,radius,category,area
-Entry,,Public,250
-Living,,Public,450
-Kitchen,,Public,300
-Dining,,Public,220
-Primary Bedroom,,Bedroom,300
-Bedroom 2,,Bedroom,160
-Bedroom 3,9'-6",Bedroom,
-Laundry,,Service,80
-Mechanical,6',Service,
-Garage,,Garage,480
-Patio,,Exterior,300
+name,radius,category,area,shape
+Entry,,Public,250,
+Living,,Public,450,
+Kitchen,,Public,300,
+Dining,,Public,220,
+Primary Bedroom,,Bedroom,300,
+Bedroom 2,,Bedroom,160,
+Bedroom 3,9'-6",Bedroom,,
+Laundry,,Service,80,square
+Mechanical,6',Service,,
+Garage,,Garage,480,square
+Patio,,Exterior,300,

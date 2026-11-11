@@ -64,13 +64,22 @@ export interface Category {
  * Tagged union so new shape kinds (ellipse, roundedRect) can be added later.
  * Every function that switches on `kind` lives in model/geometry.ts.
  */
-export type Shape = CircleShape | BlobShape;
-// Future: | { kind: 'ellipse'; rxFt: number; ryFt: number }
-//         | { kind: 'roundedRect'; widthFt: number; heightFt: number; cornerFt: number }
+/** Every element's outline. Add kinds here; TypeScript then flags each switch to complete. */
+export type Shape = CircleShape | RectShape | BlobShape;
+
+/** Shapes the bubble tool can place and an element can be converted between. */
+export type SizableKind = 'circle' | 'rect';
 
 export interface CircleShape {
   kind: 'circle';
   radiusFt: number;
+}
+
+/** Axis-aligned rectangle centered on the node (a square when width = height). */
+export interface RectShape {
+  kind: 'rect';
+  widthFt: number;
+  heightFt: number;
 }
 
 /** A control point of a blob: free (feet relative to the node's x/y) or anchored to a bubble's offset ring. */

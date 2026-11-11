@@ -1,20 +1,23 @@
 /**
- * CSV import: columns name, radius, category, area (header names are
+ * CSV import: columns name, radius, category, area, shape (header names are
  * case-insensitive; radius OR area is required per row). Radius accepts
  * 12.5 / 12' / 12'-6"; area accepts 1200 / 1,200 sf. Radius wins when both.
+ * Shape is circle (default) or square; a square's "radius" is half its side.
  */
 import Papa from 'papaparse';
-import type { BubbleNode, Category, Point, Project } from '../model/types';
+import type { BubbleNode, Category, Point, Project, SizableKind } from '../model/types';
 import { createCategory, createNode, nextCategoryColor } from '../model/factory';
-import { nodeBounds, radiusFromArea, unionBounds } from '../model/geometry';
+import { newShape, nodeBounds, radiusFromArea, unionBounds } from '../model/geometry';
 import { MIN_RADIUS_FT } from '../model/defaults';
 import { parseArea, parseLength } from '../model/units';
 import { gridLayout, gridSize } from './autoLayout';
 
 export interface CsvRow {
   name: string;
+  /** half-extent: radius of a circle, half the side of a square */
   radiusFt: number;
   category: string | null;
+  kind: SizableKind;
 }
 
 export interface CsvParseResult {
@@ -27,6 +30,17 @@ const ALIASES: Record<string, string[]> = {
   radius: ['radius', 'r'],
   category: ['category', 'type', 'group', 'zone'],
   area: ['area', 'sf', 'sqft', 'size', 'square feet'],
+  shape: ['shape', 'form'],
+};
+
+const SHAPE_NAMES: Record<string, SizableKind> = {
+  circle: 'circle',
+  round: 'circle',
+  bubble: 'circle',
+  square: 'rect',
+  rect: 'rect',
+  rectangle: 'rect',
+  box: 'rect',
 };
 
 function canonicalHeader(h: string): string | null {
@@ -57,9 +71,13 @@ export function parseCsv(text: string): CsvParseResult {
     const name = (r.name ?? '').trim();
     const rad = r.radius?.trim() ? parseLength(r.radius) : null;
     const area = r.area?.trim() ? parseArea(r.area) : null;
+    const shapeText = r.shape?.trim().toLowerCase() ?? '';
+    const kind = SHAPE_NAMES[shapeText] ?? 'circle';
+    if (shapeText && !SHAPE_NAMES[shapeText])
+      errors.push(`Line ${line}: unknown shape “${r.shape.trim()}” (use circle or square); drawn as a circle.`);
     let radiusFt: number | null = null;
     if (rad !== null && rad > 0) radiusFt = rad;
-    else if (area !== null && area > 0) radiusFt = radiusFromArea(area);
+    else if (area !== null && area > 0) radiusFt = kind === 'circle' ? radiusFromArea(area) : Math.sqrt(area) / 2;
     if (!name && radiusFt === null) return; // blank-ish row
     if (radiusFt === null) {
       errors.push(`Line ${line}: no valid radius or area for “${name || '(unnamed)'}”.`);
@@ -69,6 +87,7 @@ export function parseCsv(text: string): CsvParseResult {
       name: name || `Space ${rows.length + 1}`,
       radiusFt: Math.max(MIN_RADIUS_FT, Math.round(radiusFt * 1000) / 1000),
       category: r.category?.trim() || null,
+      kind,
     });
   });
   return { rows, errors };
@@ -100,7 +119,8 @@ export function buildImport(
     return id;
   };
 
-  const radii = rows.map((r) => r.radiusFt);
+  // squares reach further at their corners
+  const radii = rows.map((r) => (r.kind === 'rect' ? r.radiusFt * Math.SQRT2 : r.radiusFt));
   const size = gridSize(radii);
   const existing = unionBounds(Object.values(project.nodes).map((n) => nodeBounds(n, project)));
   const origin = existing
@@ -113,7 +133,7 @@ export function buildImport(
       name: r.name,
       x: pos[i].x,
       y: pos[i].y,
-      shape: { kind: 'circle', radiusFt: r.radiusFt },
+      shape: newShape(r.kind, r.radiusFt),
       categoryId: catId(r.category),
     }),
   );

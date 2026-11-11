@@ -7,6 +7,7 @@ export function ShortcutsHelp() {
   const step = formatLengthCompact(useDoc().settings.snap.radiusIncrementFt);
   const rows: [string, string][] = [
     ['V / B / C / S', 'Select / Bubble / Connect / Shape'],
+    ['B again', 'Switch bubble shape (circle / square)'],
     ['Shape tool', 'Drag freehand or click points; double-click a gap to fill it'],
     ['Scroll', `Zoom (over selected bubble: resize ${step})`],
     ['Space + drag', 'Pan (or middle mouse)'],

@@ -30,6 +30,10 @@ function fullStyle(raw: any, base: StyleProps = DEFAULT_STYLE): StyleProps {
 function cleanShape(raw: any): Shape | null {
   if (raw?.kind === 'circle')
     return typeof raw.radiusFt === 'number' && raw.radiusFt > 0 ? { kind: 'circle', radiusFt: raw.radiusFt } : null;
+  if (raw?.kind === 'rect') {
+    const ok = (v: unknown) => typeof v === 'number' && v > 0;
+    return ok(raw.widthFt) && ok(raw.heightFt) ? { kind: 'rect', widthFt: raw.widthFt, heightFt: raw.heightFt } : null;
+  }
   if (raw?.kind === 'blob' && Array.isArray(raw.points)) {
     const points: BlobPoint[] = [];
     for (const p of raw.points) {

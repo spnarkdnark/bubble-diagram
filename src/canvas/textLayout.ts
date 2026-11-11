@@ -4,7 +4,7 @@
  * bubble center. Uses a 2D canvas for text measurement (browser only).
  */
 import type { BubbleNode, Project } from '../model/types';
-import { nodeSize } from '../model/geometry';
+import { labelWidthFt } from '../model/geometry';
 import { resolveStyle, secondaryLabel, type ResolvedStyle } from '../model/selectors';
 import { ftToPt } from '../model/units';
 import { LABEL_FONT_FAMILY, SECONDARY_LABEL_COLOR } from '../model/defaults';
@@ -97,11 +97,8 @@ export function layoutLabel(
   const name = font.upper ? node.name.toUpperCase() : node.name;
   const size = style.labelSizePt;
   const weight = style.labelBold ? 600 : 400;
-  // wrap width: ~80% of the diameter on paper, but never narrower than a few characters
-  const widthPt = Math.max(
-    ftToPt(nodeSize(node, project) * 2 * (node.shape.kind === 'circle' ? 0.8 : 0.6), scale),
-    size * 4,
-  );
+  // wrap width: most of the shape's width on paper, but never narrower than a few characters
+  const widthPt = Math.max(ftToPt(labelWidthFt(node, project), scale), size * 4);
   const rows: Omit<LabelLine, 'topPt'>[] = [];
   for (const t of wrap(name, size, weight, widthPt))
     rows.push({

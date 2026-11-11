@@ -137,3 +137,31 @@ test('drag from one bubble to another connects them', async ({ page, canvas }) =
   await canvas.drag([300, 300], [700, 300]);
   expect(Object.keys((await doc(page)).connections)).toHaveLength(1);
 });
+
+test('squares: place, corner hit, corner resize, width/height, convert keeping area', async ({ page, canvas }) => {
+  await page.getByLabel('Bubble shape').selectOption('rect');
+  await canvas.click(400, 300);
+  let [n] = await nodes(page);
+  expect(n.shape).toEqual({ kind: 'rect', widthFt: 20, heightFt: 20 });
+  // 20' side = 240 px at 1/8" and 100%: a point near the corner is inside (a circle would miss it)
+  await canvas.click(1000, 700);
+  await canvas.click(400 + 110, 300 - 110);
+  expect((await ui(page)).selection.nodes).toEqual([n.id]);
+  // the corner handle resizes proportionally, snapping the half-side to 6"
+  await canvas.drag([520, 420], [580, 470]);
+  [n] = await nodes(page);
+  expect(n.shape).toEqual({ kind: 'rect', widthFt: 30, heightFt: 30 });
+  // width and height can differ
+  await field(page, 'Height').fill('12');
+  await field(page, 'Height').press('Enter');
+  [n] = await nodes(page);
+  expect(n.shape).toEqual({ kind: 'rect', widthFt: 30, heightFt: 12 });
+  // converting keeps the area
+  await page.locator('.sidebar .field:has(.field-label:text-is("Shape")) select').selectOption('circle');
+  [n] = await nodes(page);
+  expect(Math.PI * n.shape.radiusFt ** 2).toBeCloseTo(360, 6);
+  // B, then B again, switches what the bubble tool places
+  await page.keyboard.press('b');
+  await page.keyboard.press('b');
+  await expect(page.getByLabel('Bubble shape')).toHaveValue('circle');
+});

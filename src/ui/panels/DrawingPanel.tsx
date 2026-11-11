@@ -2,6 +2,7 @@
 import { useDoc } from '../../store/documentStore';
 import * as A from '../../store/actions';
 import { totalArea } from '../../model/selectors';
+import { isSizable } from '../../model/geometry';
 import { findOverlaps } from '../../model/overlaps';
 import { formatArea, formatFeetInches, parseLength } from '../../model/units';
 import { Field, NumberField, ReadOnly, Section, SelectField, TextField } from '../controls/Controls';
@@ -40,7 +41,7 @@ export function DrawingPanel() {
         />
       </Field>
       <Field label="Bubbles">
-        <ReadOnly value={String(nodes.filter((n) => n.shape.kind === 'circle').length)} />
+        <ReadOnly value={String(nodes.filter((n) => isSizable(n.shape)).length)} />
       </Field>
       <Field label="Shapes">
         <ReadOnly value={String(nodes.filter((n) => n.shape.kind === 'blob').length)} />

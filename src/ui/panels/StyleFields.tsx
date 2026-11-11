@@ -110,7 +110,7 @@ export function StyleFields({ src, compact }: { src: StyleSource; compact?: bool
             value={src.get('labelSecondary')}
             options={[
               { value: 'none', label: 'Name only' },
-              { value: 'radius', label: 'Radius' },
+              { value: 'radius', label: 'Radius / sides' },
               { value: 'area', label: 'Area' },
             ]}
             onChange={(v) => src.set('labelSecondary', v)}

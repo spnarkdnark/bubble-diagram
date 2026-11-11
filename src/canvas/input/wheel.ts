@@ -1,10 +1,11 @@
-/** Wheel: zoom at the cursor, or step the radius of a selected bubble under it. */
+/** Wheel: zoom at the cursor, or step the size of a selected bubble under it. */
 import { getDoc } from '../../store/documentStore';
 import { useUi } from '../../store/uiStore';
 import * as A from '../../store/actions';
 import { topNodeAt } from '../hitTest';
-import { radiusReadout } from '../tools/select';
+import { sizeReadout } from '../tools/select';
 import type { Point } from '../../model/types';
+import { isSizable } from '../../model/geometry';
 
 /** A wheel delta at least this big is one mouse-wheel notch; smaller deltas (trackpads) accumulate. */
 const NOTCH = 40;
@@ -24,7 +25,7 @@ export function createWheelHandler() {
     const doc = getDoc();
     const over = topNodeAt(doc, world);
     const resizing =
-      over && ui.tool === 'select' && ui.selection.nodes.includes(over) && doc.nodes[over].shape.kind === 'circle';
+      over && ui.tool === 'select' && ui.selection.nodes.includes(over) && isSizable(doc.nodes[over].shape);
     if (!resizing) return A.zoomAt(screen, Math.exp(-delta * 0.0015));
 
     let dir: 1 | -1 | 0 = 0;
@@ -39,9 +40,9 @@ export function createWheelHandler() {
       }
     }
     if (!dir) return;
-    const circles = ui.selection.nodes.filter((id) => doc.nodes[id]?.shape.kind === 'circle');
-    A.stepRadius(circles, dir, e.shiftKey ? 1 / 12 : doc.settings.snap.radiusIncrementFt);
-    ui.setReadout(radiusReadout(over));
+    const sizable = ui.selection.nodes.filter((id) => doc.nodes[id] && isSizable(doc.nodes[id].shape));
+    A.stepRadius(sizable, dir, e.shiftKey ? 1 / 12 : doc.settings.snap.radiusIncrementFt);
+    ui.setReadout(sizeReadout(over));
     window.clearTimeout(readoutTimer);
     readoutTimer = window.setTimeout(() => useUi.getState().setReadout(null), 900);
   };

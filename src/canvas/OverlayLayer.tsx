@@ -2,7 +2,7 @@
 import { Circle, Label, Layer, Line, Rect, Tag, Text } from 'react-konva';
 import type { BubbleNode, Point, Project } from '../model/types';
 import { blobGeometry } from '../model/blob';
-import { boundaryPoint, connectionSegment, shapeSize } from '../model/geometry';
+import { boundaryPoint, connectionSegment, isSizable, nodeOutline, shapeSize } from '../model/geometry';
 import { orderedNodes } from '../model/selectors';
 import type { Scene } from '../render/scene';
 import { useUi } from '../store/uiStore';
@@ -28,7 +28,7 @@ export function OverlayLayer({ doc, scene, k }: { doc: Project; scene: Scene; k:
 
   const selected = new Set(selection.nodes);
   const sole = selection.nodes.length === 1 && tool === 'select' ? doc.nodes[selection.nodes[0]] : undefined;
-  const handle = sole?.shape.kind === 'circle' ? handlePosition(doc, sole.id) : null;
+  const handle = sole && isSizable(sole.shape) ? handlePosition(doc, sole.id) : null;
   const editShape = sole?.shape.kind === 'blob' ? sole : undefined;
   const fromNode = connectFrom ? doc.nodes[connectFrom] : undefined;
   const highlighted = orderedNodes(doc).filter((n) => selected.has(n.id) || n.id === connectFrom);
@@ -67,13 +67,25 @@ export function OverlayLayer({ doc, scene, k }: { doc: Project; scene: Scene; k:
           />
         ))}
 
-      {highlighted.map((n) =>
-        n.shape.kind === 'blob' ? (
-          <Line key={n.id} points={flat(blobGeometry(n, doc).poly)} closed {...ring(n)} />
-        ) : (
-          <Circle key={n.id} x={n.x} y={n.y} radius={shapeSize(n.shape) + 3 / k} {...ring(n)} />
-        ),
-      )}
+      {highlighted.map((n) => {
+        if (n.shape.kind === 'circle')
+          return <Circle key={n.id} x={n.x} y={n.y} radius={shapeSize(n.shape) + 3 / k} {...ring(n)} />;
+        if (n.shape.kind === 'rect') {
+          const pad = 3 / k;
+          const { widthFt: w, heightFt: h } = n.shape;
+          return (
+            <Rect
+              key={n.id}
+              x={n.x - w / 2 - pad}
+              y={n.y - h / 2 - pad}
+              width={w + 2 * pad}
+              height={h + 2 * pad}
+              {...ring(n)}
+            />
+          );
+        }
+        return <Line key={n.id} points={flat(nodeOutline(n, doc) ?? [])} closed {...ring(n)} />;
+      })}
 
       {handle && (
         <Rect

@@ -1,6 +1,6 @@
 import { useEffect } from 'react';
 import { useDocument } from '../store/documentStore';
-import { useUi } from '../store/uiStore';
+import { nextBubbleKind, useUi } from '../store/uiStore';
 import * as A from '../store/actions';
 import { NUDGE_BIG_FT, NUDGE_FT } from '../model/defaults';
 import { armPasteStyle } from '../io/clipboardActions';
@@ -132,7 +132,9 @@ export function useKeyboardShortcuts(handlers: ShortcutHandlers = {}) {
           ui.setTool('select');
           return;
         case 'b':
-          ui.setTool('bubble');
+          // B again switches what the bubble tool places
+          if (ui.tool === 'bubble') ui.setBubbleKind(nextBubbleKind(ui.bubbleKind));
+          else ui.setTool('bubble');
           return;
         case 'c':
           ui.setTool('connect');

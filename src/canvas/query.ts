@@ -2,7 +2,8 @@
  * What is under the pointer? Geometric queries in world feet, shared by all tools.
  * Reads the most recently rendered scene (for labels and overlap markers).
  */
-import type { BubbleNode, Id, Point } from '../model/types';
+import type { BubbleNode, Id, Point, Shape } from '../model/types';
+import { isSizable } from '../model/geometry';
 import { blobFromClicks, blobGeometry, circleRings, snapToRing, toBlobShape, type SnapInfo } from '../model/blob';
 import { getDoc } from '../store/documentStore';
 import { useUi, type EditingLabel } from '../store/uiStore';
@@ -19,18 +20,18 @@ export function setLatestScene(scene: Scene) {
   latestScene = scene;
 }
 
-/** The single selected node when it has a given shape kind (select tool only). */
-function soleSelected(kind: BubbleNode['shape']['kind']): Id | null {
+/** The single selected node when its shape passes `test` (select tool only). */
+function soleSelected(test: (shape: Shape) => boolean): Id | null {
   const ui = useUi.getState();
   if (ui.tool !== 'select' || ui.selection.nodes.length !== 1) return null;
   const n = getDoc().nodes[ui.selection.nodes[0]];
-  return n?.shape.kind === kind ? n.id : null;
+  return n && test(n.shape) ? n.id : null;
 }
 
-/** Circle whose resize handle is shown. */
-export const resizeTarget = () => soleSelected('circle');
+/** Circle or rectangle whose resize handle is shown. */
+export const resizeTarget = () => soleSelected(isSizable);
 /** Shape whose control points are editable. */
-export const pointEditTarget = () => soleSelected('blob');
+export const pointEditTarget = () => soleSelected((s) => s.kind === 'blob');
 
 /** Overlap markers currently shown: those of selected bubbles or selected overlaps. */
 export function visibleMarkers() {
@@ -46,7 +47,8 @@ export function hitAt(p: Point): Hit {
 
 /**
  * Editable label line under `p` (topmost node first): its name, or the size line
- * (area/radius) of a circle. Shapes' areas follow their outline, so they aren't editable.
+ * (area/dimensions) of a circle or rectangle. Freeform shapes' areas follow their
+ * outline, so they aren't editable.
  */
 export function labelAt(p: Point): EditingLabel | null {
   if (!latestScene) return null;
@@ -58,7 +60,7 @@ export function labelAt(p: Point): EditingLabel | null {
   for (let i = nodes.length - 1; i >= 0; i--) {
     const { id, label } = nodes[i];
     if (inside(labelRect(label, latestScene.ftPerPt))) return { id, part: 'name' };
-    if (doc.nodes[id]?.shape.kind === 'circle' && inside(labelRect(label, latestScene.ftPerPt, true)))
+    if (doc.nodes[id] && isSizable(doc.nodes[id].shape) && inside(labelRect(label, latestScene.ftPerPt, true)))
       return { id, part: 'size' };
   }
   return null;

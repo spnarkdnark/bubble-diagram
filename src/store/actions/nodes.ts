@@ -1,12 +1,9 @@
-/** Creating, editing, moving, duplicating and deleting elements. */
+/** Creating, editing, moving, duplicating and deleting elements (sizing: size.ts). */
 import type { Draft } from 'immer';
 import type { BubbleNode, Id, Point } from '../../model/types';
 import { createNode, newId } from '../../model/factory';
-import { nodeArea, radiusFromArea, shapeSize, withSize } from '../../model/geometry';
-import { resolveStyle } from '../../model/selectors';
-import { DUPLICATE_OFFSET_FT, MIN_RADIUS_FT } from '../../model/defaults';
+import { DUPLICATE_OFFSET_FT } from '../../model/defaults';
 import { detachAnchors, remapBlob } from '../../model/blob';
-import { formatArea, formatFeetInches, parseArea, parseLength, stepToIncrement } from '../../model/units';
 import { getDoc } from '../documentStore';
 import { commit, ui } from './shared';
 
@@ -27,25 +24,6 @@ export function updateNodes(ids: Id[], fn: (n: Draft<BubbleNode>) => void, coale
       for (const id of ids) if (d.nodes[id]) fn(d.nodes[id]);
     },
     coalesceKey ? { coalesceKey: `${coalesceKey}:${ids.join(',')}` } : undefined,
-  );
-}
-
-export function setRadius(ids: Id[], radiusFt: number) {
-  const r = Math.max(MIN_RADIUS_FT, radiusFt);
-  updateNodes(ids, (n) => {
-    n.shape = withSize(n.shape, r);
-  });
-}
-
-/** Scroll-wheel resize: step each node to the next increment (one undo step per scroll burst). */
-export function stepRadius(ids: Id[], dir: 1 | -1, incrementFt: number) {
-  updateNodes(
-    ids,
-    (n) => {
-      const next = stepToIncrement(shapeSize(n.shape), incrementFt, dir);
-      n.shape = withSize(n.shape, Math.max(MIN_RADIUS_FT, next));
-    },
-    'wheel-resize',
   );
 }
 
@@ -117,31 +95,6 @@ export function bringToFront(ids: Id[]) {
   commit((d) => {
     d.nodeOrder = [...d.nodeOrder.filter((id) => !set.has(id)), ...d.nodeOrder.filter((id) => set.has(id))];
   });
-}
-
-/** Text for the on-canvas size editor: the circle's area or radius, whichever its label shows. */
-export function sizeEditText(id: Id): string {
-  const doc = getDoc();
-  const n = doc.nodes[id];
-  if (!n) return '';
-  return resolveStyle(n, doc).labelSecondary === 'radius'
-    ? formatFeetInches(shapeSize(n.shape))
-    : formatArea(nodeArea(n, doc));
-}
-
-/** Resize a circle from the on-canvas size editor (area or radius); unparseable input is ignored. */
-export function setSizeFromText(id: Id, text: string) {
-  const doc = getDoc();
-  const n = doc.nodes[id];
-  if (!n || n.shape.kind !== 'circle' || text.trim() === sizeEditText(id)) return;
-  if (resolveStyle(n, doc).labelSecondary === 'radius') {
-    const r = parseLength(text.replace(/^\s*r\s*/i, ''));
-    if (r !== null && r > 0) setRadius([id], r);
-  } else {
-    const sf = parseArea(text);
-    // exact area: radius = sqrt(area/π), unsnapped
-    if (sf !== null && sf > 0) setRadius([id], radiusFromArea(sf));
-  }
 }
 
 /** Rename from the on-canvas editor: one undo step; empty names are ignored. */

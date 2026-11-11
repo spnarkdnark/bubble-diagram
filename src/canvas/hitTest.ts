@@ -1,6 +1,6 @@
 /** Geometry-based hit testing in world feet (Konva layers are non-listening). */
 import type { Id, Point, Project } from '../model/types';
-import { connectionSegment, containsPoint, shapeSize } from '../model/geometry';
+import { connectionSegment, containsPoint, resizeHandle } from '../model/geometry';
 
 export type Hit =
   | { kind: 'handle'; id: Id }
@@ -17,10 +17,10 @@ function distToSegment(p: Point, a: Point, b: Point): number {
   return Math.hypot(p.x - (a.x + t * dx), p.y - (a.y + t * dy));
 }
 
-/** World position of a node's resize handle (right edge). */
+/** World position of a node's resize handle. */
 export function handlePosition(project: Project, id: Id): Point | null {
   const n = project.nodes[id];
-  return n ? { x: n.x + shapeSize(n.shape), y: n.y } : null;
+  return n ? resizeHandle(n) : null;
 }
 
 export function topNodeAt(project: Project, p: Point): Id | null {

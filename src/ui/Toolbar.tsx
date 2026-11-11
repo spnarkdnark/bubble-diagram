@@ -3,8 +3,8 @@ import { useDoc, useDocument } from '../store/documentStore';
 import { useUi, type ToolId } from '../store/uiStore';
 import * as A from '../store/actions';
 import { SCALES } from '../model/units';
-import { GRID_SPACINGS_FT } from '../model/defaults';
-import type { ScaleId } from '../model/types';
+import { GRID_SPACINGS_FT, SIZABLE_SHAPES } from '../model/defaults';
+import type { ScaleId, SizableKind } from '../model/types';
 import { FileMenu } from './FileMenu';
 import { PRESET_OPTIONS } from './panels/GraphicPanel';
 
@@ -44,6 +44,12 @@ const Icons = {
       <path d="M8 5.5v5M5.5 8h5" stroke="currentColor" strokeWidth="1.3" />
     </svg>
   ),
+  square: (
+    <svg width="16" height="16" viewBox="0 0 16 16">
+      <rect x="2.5" y="2.5" width="11" height="11" fill="none" stroke="currentColor" strokeWidth="1.3" />
+      <path d="M8 5.5v5M5.5 8h5" stroke="currentColor" strokeWidth="1.3" />
+    </svg>
+  ),
   shape: (
     <svg width="16" height="16" viewBox="0 0 16 16">
       <path
@@ -69,13 +75,36 @@ export function Toolbar() {
   const canUndo = useDocument((s) => s.history.past.length > 0);
   const canRedo = useDocument((s) => s.history.future.length > 0);
   const zoom = useUi((s) => s.view.zoom);
+  const bubbleKind = useUi((s) => s.bubbleKind);
   const grid = doc.settings.grid;
 
   return (
     <header className="toolbar">
       <div className="group">
         <ToolButton tool="select" label="Select" shortcut="V" icon={Icons.select} />
-        <ToolButton tool="bubble" label="Bubble" shortcut="B" icon={Icons.bubble} />
+        <ToolButton
+          tool="bubble"
+          label="Bubble"
+          shortcut="B; B again switches shape"
+          icon={bubbleKind === 'rect' ? Icons.square : Icons.bubble}
+        />
+        <select
+          className="input narrow"
+          value={bubbleKind}
+          title="Bubble shape"
+          aria-label="Bubble shape"
+          onChange={(e) => {
+            const ui = useUi.getState();
+            ui.setBubbleKind(e.target.value as SizableKind);
+            ui.setTool('bubble');
+          }}
+        >
+          {SIZABLE_SHAPES.map((s) => (
+            <option key={s.kind} value={s.kind}>
+              {s.label}
+            </option>
+          ))}
+        </select>
         <ToolButton tool="connect" label="Connect" shortcut="C" icon={Icons.connect} />
         <ToolButton tool="shape" label="Shape" shortcut="S" icon={Icons.shape} />
       </div>

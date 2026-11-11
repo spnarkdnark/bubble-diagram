@@ -95,3 +95,22 @@ export function resample(poly: Pt[], spacing: number): Pt[] {
   }
   return out;
 }
+
+/**
+ * Densify a closed polygon with sharp corners for sketching: every corner is
+ * kept exactly, edges get points about `spacing` apart, and the ring starts in
+ * the middle of the first edge so a hand-drawn stroke closes on a straight side.
+ */
+export function subdivide(poly: Pt[], spacing: number): Pt[] {
+  if (poly.length < 3) return poly;
+  const out: Pt[] = [];
+  let start = 0;
+  for (let i = 0; i < poly.length; i++) {
+    const a = poly[i];
+    const b = poly[(i + 1) % poly.length];
+    const n = Math.max(2, Math.min(150, Math.round(Math.hypot(b.x - a.x, b.y - a.y) / spacing)));
+    if (i === 0) start = Math.floor(n / 2);
+    for (let j = 0; j < n; j++) out.push({ x: a.x + ((b.x - a.x) * j) / n, y: a.y + ((b.y - a.y) * j) / n });
+  }
+  return [...out.slice(start), ...out.slice(0, start)];
+}

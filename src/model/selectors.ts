@@ -1,8 +1,8 @@
-import type { BubbleNode, Connection, Project, StyleProps } from './types';
+import type { BubbleNode, Connection, Project, Shape, StyleProps } from './types';
 import { AUTO_STROKE_DARKEN } from './defaults';
 import { darken } from './color';
-import { nodeArea, shapeSize } from './geometry';
-import { formatArea, formatLengthShort } from './units';
+import { nodeArea } from './geometry';
+import { formatArea, formatFeetInches, formatLengthShort } from './units';
 
 export type ResolvedStyle = StyleProps & { stroke: string };
 
@@ -19,12 +19,27 @@ export function resolveStyle(node: BubbleNode, project: Project): ResolvedStyle 
   return { ...s, stroke: s.stroke ?? darken(s.fill, AUTO_STROKE_DARKEN) };
 }
 
+/**
+ * A shape's dimensions as text: "R 12'-6"" for circles, "20' × 30'" for rectangles,
+ * null for shapes without simple dimensions. `exact` uses feet-inches throughout
+ * (readouts and the editor) instead of the shortest form (labels).
+ */
+export function dimensionText(shape: Shape, exact = false): string | null {
+  const f = exact ? formatFeetInches : formatLengthShort;
+  switch (shape.kind) {
+    case 'circle':
+      return `R ${f(shape.radiusFt)}`;
+    case 'rect':
+      return `${f(shape.widthFt)} × ${f(shape.heightFt)}`;
+    case 'blob':
+      return null;
+  }
+}
+
 export function secondaryLabel(node: BubbleNode, project: Project, style = resolveStyle(node, project)): string | null {
   switch (style.labelSecondary) {
     case 'radius':
-      return node.shape.kind === 'circle'
-        ? `R ${formatLengthShort(shapeSize(node.shape))}`
-        : formatArea(nodeArea(node, project));
+      return dimensionText(node.shape) ?? formatArea(nodeArea(node, project));
     case 'area':
       return formatArea(nodeArea(node, project));
     default:

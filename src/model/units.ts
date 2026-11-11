@@ -113,6 +113,18 @@ export function parseArea(input: string | number): number | null {
   return parseFloat(s);
 }
 
+/**
+ * Parse rectangle dimensions: "20 x 30", "20' × 30'-6"", "20x30". A single
+ * length means a square. Returns null when unparseable.
+ */
+export function parseDimensions(input: string): { widthFt: number; heightFt: number } | null {
+  const parts = input.trim().split(/\s*[x×*]\s*/i);
+  if (parts.length > 2) return null;
+  const w = parseLength(parts[0]);
+  const h = parts.length === 2 ? parseLength(parts[1]) : w;
+  return w !== null && h !== null && w > 0 && h > 0 ? { widthFt: w, heightFt: h } : null;
+}
+
 const NICE_BAR_FT = [1, 2, 4, 5, 8, 10, 16, 20, 25, 32, 40, 50, 64, 100, 200, 250, 500, 1000];
 
 /** Largest "nice" scale-bar length (ft) whose drawn length stays within `maxUnits`. */

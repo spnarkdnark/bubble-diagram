@@ -1,5 +1,6 @@
 import { create } from 'zustand';
-import type { Id, Point } from '../model/types';
+import type { Id, Point, SizableKind } from '../model/types';
+import { SIZABLE_SHAPES } from '../model/defaults';
 
 /** Which canvas tool is active (implementations live in canvas/tools/). */
 export type ToolId = 'select' | 'bubble' | 'connect' | 'shape';
@@ -27,6 +28,9 @@ export interface View {
 
 interface UiState {
   tool: ToolId;
+  /** what the bubble tool places */
+  bubbleKind: SizableKind;
+  setBubbleKind: (k: SizableKind) => void;
   selection: Selection;
   connectFrom: Id | null;
   view: View;
@@ -58,11 +62,19 @@ interface UiState {
   showToast: (message: string, action?: { label: string; run: () => void }) => void;
 }
 
+/** The bubble shape after `k` in the picker (B pressed again with the bubble tool active). */
+export function nextBubbleKind(k: SizableKind): SizableKind {
+  const i = SIZABLE_SHAPES.findIndex((s) => s.kind === k);
+  return SIZABLE_SHAPES[(i + 1) % SIZABLE_SHAPES.length].kind;
+}
+
 export const MIN_ZOOM = 0.05;
 export const MAX_ZOOM = 32;
 
 export const useUi = create<UiState>((set) => ({
   tool: 'select',
+  bubbleKind: 'circle',
+  setBubbleKind: (bubbleKind) => set({ bubbleKind }),
   selection: { nodes: [], connections: [], overlaps: [] },
   connectFrom: null,
   view: { zoom: 1, panX: 0, panY: 0 },

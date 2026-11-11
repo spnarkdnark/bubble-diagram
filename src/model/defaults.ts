@@ -3,6 +3,7 @@ import type {
   DrawingSettings,
   GraphicSettings,
   OverlapSettings,
+  SizableKind,
   StrokeStyle,
   StyleProps,
 } from './types';
@@ -56,6 +57,13 @@ export const DEFAULT_CATEGORIES: { name: string; style: StyleProps }[] = [
   { name: EXTERIOR_CATEGORY, style: firmStyle('#ffdfba', { strokeStyle: 'dashed' }) },
 ];
 
+/** Shapes the bubble tool places, in picker order (a new sizable kind gets a row here). */
+export const SIZABLE_SHAPES: { kind: SizableKind; label: string }[] = [
+  { kind: 'circle', label: 'Circle' },
+  { kind: 'rect', label: 'Square' },
+];
+
+/** Half-extent of a new bubble: a 10' radius circle, a 20' square. */
 export const DEFAULT_RADIUS_FT = 10;
 export const MIN_RADIUS_FT = 0.5;
 export const RADIUS_SNAP_FT = 0.5; // 6"

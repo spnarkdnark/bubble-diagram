@@ -4,6 +4,7 @@
  */
 export * from './selection';
 export * from './nodes';
+export * from './size';
 export * from './connections';
 export * from './categories';
 export * from './styles';

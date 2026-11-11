@@ -4,9 +4,10 @@
  */
 import type { Id, Point } from '../../model/types';
 import { blobGeometry, movePoint } from '../../model/blob';
-import { shapeSize, withSize } from '../../model/geometry';
+import { resizeHandle, sizeAtHandle, withSize } from '../../model/geometry';
+import { dimensionText } from '../../model/selectors';
 import { MIN_RADIUS_FT } from '../../model/defaults';
-import { formatFeetInches, snap } from '../../model/units';
+import { snap } from '../../model/units';
 import { getDoc, useDocument } from '../../store/documentStore';
 import { useUi } from '../../store/uiStore';
 import * as A from '../../store/actions';
@@ -72,13 +73,14 @@ function resizeGesture(id: Id): Gesture {
         ui.setReadout(null);
         return;
       }
-      let r = Math.hypot(e.world.x - n.x, e.world.y - n.y);
+      // the half-extent (radius / half-width) snaps, so a square's side moves in 2× steps
+      let r = sizeAtHandle(n, e.world);
       if (!e.shift) r = snap(r, getDoc().settings.snap.radiusIncrementFt);
       r = Math.max(MIN_RADIUS_FT, r);
       gesture().preview((d) => {
         d.nodes[id].shape = withSize(d.nodes[id].shape, r);
       });
-      ui.setReadout({ text: `R ${formatFeetInches(r)}`, at: { x: n.x + r, y: n.y } });
+      ui.setReadout(sizeReadout(id));
     },
     up() {
       gesture().endGesture();
@@ -196,9 +198,8 @@ export const selectTool: Tool = {
   },
 };
 
-/** Radius readout position for a circle (used by the wheel resize too). */
-export function radiusReadout(id: Id) {
+/** Dimension readout next to the resize handle (used by the wheel resize too). */
+export function sizeReadout(id: Id) {
   const n = getDoc().nodes[id];
-  const r = shapeSize(n.shape);
-  return { text: `R ${formatFeetInches(r)}`, at: { x: n.x + r, y: n.y } };
+  return { text: dimensionText(n.shape, true) ?? '', at: resizeHandle(n) ?? { x: n.x, y: n.y } };
 }
