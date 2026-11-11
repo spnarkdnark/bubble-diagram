@@ -1,30 +1,35 @@
 /**
- * Category standards: the categories (and the uncategorized default style) are
- * shared by every open diagram. Each Project still stores a copy so saved files
+ * Firm standards: the categories, the uncategorized default style and the
+ * graphic style (sketch character, paper, lettering) are shared by every open diagram. Each Project still stores a copy so saved files
  * are self-contained; these pure functions keep copies in line with the library.
  */
-import type { Category, Id, Project, StyleProps } from './types';
+import type { Category, GraphicSettings, Id, Project, StyleProps } from './types';
 import { createCategory } from './factory';
 
 export interface Standards {
   categories: Record<Id, Category>;
   categoryOrder: Id[];
   defaultStyle: StyleProps;
+  graphic: GraphicSettings;
 }
 
 export function standardsOf(p: Project): Standards {
-  return { categories: p.categories, categoryOrder: p.categoryOrder, defaultStyle: p.settings.defaultStyle };
+  const { defaultStyle, graphic } = p.settings;
+  return { categories: p.categories, categoryOrder: p.categoryOrder, defaultStyle, graphic };
 }
 
-/** True when the project's categories and default style are exactly these standards. */
+/** True when the project's standards-governed parts are exactly these standards. */
 export function hasStandards(p: Project, s: Standards): boolean {
   return (
-    p.categories === s.categories && p.categoryOrder === s.categoryOrder && p.settings.defaultStyle === s.defaultStyle
+    p.categories === s.categories &&
+    p.categoryOrder === s.categoryOrder &&
+    p.settings.defaultStyle === s.defaultStyle &&
+    p.settings.graphic === s.graphic
   );
 }
 
 /**
- * Replace a project's categories and default style with the standards. Elements
+ * Replace a project's categories, default style and graphic style with the standards. Elements
  * whose category no longer exists lose it but keep their look (style baked in).
  */
 export function applyStandards(p: Project, s: Standards): Project {
@@ -41,7 +46,7 @@ export function applyStandards(p: Project, s: Standards): Project {
     nodes,
     categories: s.categories,
     categoryOrder: s.categoryOrder,
-    settings: { ...p.settings, defaultStyle: s.defaultStyle },
+    settings: { ...p.settings, defaultStyle: s.defaultStyle, graphic: s.graphic },
   };
 }
 
@@ -50,7 +55,7 @@ const key = (name: string) => name.trim().toLowerCase();
 /**
  * Bring an incoming project (opened file, restored tab) under the standards:
  * its categories are matched to the library by id, then by name, and the
- * library's styles win. Categories the library lacks are added to it.
+ * library's styles (and graphic style) win. Categories the library lacks are added to it.
  */
 export function adoptProject(p: Project, s: Standards): { project: Project; standards: Standards; restyled: number } {
   const byName = new Map(s.categoryOrder.map((id) => [key(s.categories[id].name), id]));

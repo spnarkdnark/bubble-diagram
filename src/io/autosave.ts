@@ -18,12 +18,15 @@ const DEBOUNCE_MS = 500;
 interface SavedWorkspace {
   active: number;
   tabs: { project: unknown; view?: View }[];
-  /** shared category standards (absent in saves from before standards existed) */
+  /** shared standards (absent in saves from before standards existed) */
   standards?: unknown;
 }
 
-/** Validate saved standards by running them through the project migrator. */
-function readStandards(raw: unknown): Standards | undefined {
+/**
+ * Validate saved standards by running them through the project migrator. Saves from
+ * before the graphic style was shared keep the active tab's graphic style.
+ */
+function readStandards(raw: unknown, active: Project | undefined): Standards | undefined {
   if (!raw || typeof raw !== 'object') return undefined;
   const r = raw as Partial<Standards>;
   try {
@@ -32,7 +35,7 @@ function readStandards(raw: unknown): Standards | undefined {
       nodes: {},
       categories: r.categories,
       categoryOrder: r.categoryOrder,
-      settings: { defaultStyle: r.defaultStyle },
+      settings: { defaultStyle: r.defaultStyle, graphic: r.graphic ?? active?.settings.graphic },
     });
     return standardsOf(p);
   } catch {
@@ -55,7 +58,8 @@ export function restoreAutosave(): boolean {
         }
       }
       if (tabs.length) {
-        restoreWorkspace(tabs, saved.active ?? 0, readStandards(saved.standards));
+        const a = Math.max(0, Math.min(saved.active ?? 0, tabs.length - 1));
+        restoreWorkspace(tabs, a, readStandards(saved.standards, tabs[a].project));
         return true;
       }
     }

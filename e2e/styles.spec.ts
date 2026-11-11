@@ -58,3 +58,22 @@ test('category styles are shared standards across tabs, and undo elsewhere canno
   await page.locator('.tab-new').click();
   expect((await publicStyle()).strokeWeightPt).toBe(5);
 });
+
+test('the graphic style is a shared standard across tabs', async ({ page, canvas }) => {
+  await canvas.bubble(400, 300); // something in tab 1's undo history
+  const graphic = async () => (await doc(page)).settings.graphic;
+  const preset = page.locator('label[title="Graphic style"] select');
+  await preset.selectOption('pencil');
+  await page.locator('.tab-new').click();
+  expect((await graphic()).preset).toBe('pencil');
+  await preset.selectOption('marker');
+  await page.locator('.tab').nth(0).click();
+  expect((await graphic()).preset).toBe('marker');
+  // undo in the first tab cannot bring back an older graphic style
+  await page.keyboard.press('Control+z');
+  expect((await graphic()).preset).toBe('marker');
+  await page.waitForTimeout(700);
+  await page.reload();
+  await page.waitForSelector('.canvas canvas');
+  expect((await graphic()).preset).toBe('marker');
+});

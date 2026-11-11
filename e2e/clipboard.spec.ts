@@ -29,3 +29,25 @@ test('copy/paste at the cursor, paste style, and pasting table rows', async ({ p
   await page.keyboard.press('Control+v');
   await expect.poll(async () => (await nodes(page)).length).toBe(6);
 });
+
+test('pasting a category the standards lack adds it to every tab', async ({ page, canvas }) => {
+  await page.context().grantPermissions(['clipboard-read', 'clipboard-write']);
+  const catNames = async () => (Object.values((await doc(page)).categories) as any[]).map((c) => c.name);
+  await canvas.bubble(400, 300);
+  await page.locator('.sidebar .field:has(.field-label:text-is("Category")) select').selectOption({ label: 'Public' });
+  await page.keyboard.press('Control+c');
+  // the same bubble as if copied from a file whose category is "Lab"
+  await page.evaluate(async () => {
+    const clip = JSON.parse(await navigator.clipboard.readText());
+    clip.categories = [{ ...clip.categories[0], name: 'Lab' }];
+    clip.nodes[0].categoryId = clip.categories[0].id;
+    await navigator.clipboard.writeText(JSON.stringify(clip));
+  });
+  await page.locator('.tab-new').click();
+  await page.mouse.move(canvas.x + 400, canvas.y + 300);
+  await page.keyboard.press('Control+v');
+  await expect.poll(async () => (await nodes(page)).length).toBe(1);
+  expect(await catNames()).toContain('Lab');
+  await page.locator('.tab').nth(0).click();
+  expect(await catNames()).toContain('Lab');
+});

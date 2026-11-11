@@ -18,19 +18,20 @@ export async function openProject() {
   try {
     const p = await openProjectFile();
     if (!p) return;
-    // categories follow your standards: matched by name, standards' styles win
+    // categories follow your standards (matched by name, standards' styles win); so does the graphic style
     const { project, restyled } = adoptIntoStandards(p);
+    const regraphed = JSON.stringify(p.settings.graphic) !== JSON.stringify(project.settings.graphic);
     // like a browser: reuse the current tab only when it is still empty
     if (getDoc().nodeOrder.length === 0) {
       useDocument.getState().replace(project, true);
       useUi.getState().clearSelection();
     } else newTab(project);
     requestAnimationFrame(zoomToFit);
-    toast(
-      restyled
-        ? `Opened “${p.meta.name}”. ${restyled} categor${restyled > 1 ? 'ies follow' : 'y follows'} your standard styles.`
-        : `Opened “${p.meta.name}”`,
-    );
+    const notes = [
+      restyled && `${restyled} categor${restyled > 1 ? 'ies follow' : 'y follows'} your standard styles.`,
+      regraphed && 'Drawn in your graphic standards.',
+    ].filter(Boolean);
+    toast([`Opened “${p.meta.name}”${notes.length ? '.' : ''}`, ...notes].join(' '));
   } catch (e) {
     toast(`Could not open file: ${(e as Error).message}`);
   }

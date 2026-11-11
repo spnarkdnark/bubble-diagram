@@ -15,13 +15,14 @@ export function GraphicPanel() {
   const g = useDoc().settings.graphic;
   return (
     <Section
-      title="Graphic style"
+      title="Graphic standards"
       actions={
         <button className="btn ghost small" title="Same settings, different random strokes" onClick={A.redrawHand}>
           New hand
         </button>
       }
     >
+      <p className="tip flush">Shared by every tab, like the category standards.</p>
       <Field label="Preset">
         <SelectField value={g.preset} options={PRESET_OPTIONS} onChange={(v) => v !== 'custom' && A.applyPreset(v)} />
       </Field>

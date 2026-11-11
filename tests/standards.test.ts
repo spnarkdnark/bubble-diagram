@@ -48,3 +48,16 @@ describe('category standards', () => {
     expect(project.categories[project.nodes[n2.id].categoryId!].name).toBe('Lab');
   });
 });
+
+describe('graphic standards', () => {
+  it('the graphic style is part of the standards and wins over a file', () => {
+    const lib = createProject();
+    lib.settings.graphic = { ...lib.settings.graphic, preset: 'pencil', paper: 'trace', seed: 42 };
+    const s = standardsOf(lib);
+    const file = createProject();
+    expect(applyStandards(file, s).settings.graphic).toBe(s.graphic);
+    const { project } = adoptProject(file, s);
+    expect(project.settings.graphic).toEqual(lib.settings.graphic);
+    expect(applyStandards(project, s)).toBe(project);
+  });
+});

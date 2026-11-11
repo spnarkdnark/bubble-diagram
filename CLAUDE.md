@@ -98,7 +98,7 @@ Schema v2 (v1 files upgrade in `migrate.ts`).
   `project.overlaps[overlapKey(a,b)]` stores per-pair mode overrides;
   `settings.overlap` holds the default mode/weight/color/inner arcs.
 - `settings.graphic`: the drawing's sketch character (render/sketch.ts PRESETS), paper,
-  lettering font and seed. Per diagram (not shared across tabs).
+  lettering font and seed. Part of the shared standards (see below).
 - `Connection { id, from, to, type: 'strong'|'near'|'visual' }`. Endpoints are never
   stored; `geometry.connectionSegment` computes edge-to-edge points.
 
@@ -108,21 +108,25 @@ Schema v2 (v1 files upgrade in `migrate.ts`).
 view/selection in useUi, exactly as before tabs existed, so features stay tab-unaware.
 Inactive tabs are parked (`parked[id] = {history, view, selection}`) and swapped in by
 `switchTab`. New/Open open tabs (Open reuses an empty tab). Autosave stores every tab's
-project + view + the standards under `bubble-diagram:workspace:v1`; undo history is per
+project + view + the standards (categories, default + graphic style) under `bubble-diagram:workspace:v1`; undo history is per
 tab and in memory only. Closed tabs can be reopened from the toast.
 
-## Category standards
+## Standards (categories + graphic style)
 
-Categories + the uncategorized default style are ONE shared library for all tabs
+Categories, the uncategorized default style and `settings.graphic` are ONE shared library for all tabs
 (`model/standards.ts` pure logic, `store/standardsStore.ts` current value, sync in
 `workspaceStore.ts`). Each Project still stores a copy (files stay self-contained).
 
-- Editing categories in the active tab → `installStandardsSync` makes them the standards
+- Editing any of them in the active tab → `installStandardsSync` makes them the standards
   and `setStandardsEverywhere` rewrites every other tab's whole undo history, so undo in
   another tab can never restore an old category style. The editing tab keeps its own
   history (its undo can revert its edit, which then propagates).
 - New tabs, opened files and restored tabs go through `adoptProject`: match by id, then
-  by name; the standards' styles win; unknown categories join the standards.
+  by name; the standards' styles (and graphic style) win; unknown categories join the
+  standards. Paste and CSV import add unknown categories to the active tab, and the sync
+  then adds them to the standards everywhere.
+- Adding another shared setting: put it in `Standards` (`standardsOf`, `hasStandards`,
+  `applyStandards`) and `io/autosave.ts#readStandards`; sync and adoption follow.
 
 ## State & undo conventions
 
@@ -218,10 +222,10 @@ Every feature: add/extend a unit test for pure logic, add an e2e test in the mat
 
 ## Testing notes
 
-- Unit tests (41): units, geometry, history, project file + v1 migration, CSV, styles,
+- Unit tests (42): units, geometry, history, project file + v1 migration, CSV, styles,
   standards, clipboard, overlaps, sketch determinism, blobs, render regression.
-- e2e (17, one file per area): bubbles (scale, drag/resize/wheel, selection + undo,
-  connect, sizing, names, in-place area), styles + standards, clipboard, overlaps, shapes, tabs, io.
+- e2e (19, one file per area): bubbles (scale, drag/resize/wheel, selection + undo,
+  connect, sizing, names, in-place area), styles + category/graphic standards, clipboard (+ paste adds categories), overlaps, shapes, tabs, io.
 - Canvas hit-testing is geometric (`canvas/query.ts`, `canvas/hitTest.ts`); Konva layers
   are `listening={false}`. Window-level move/up (input/useCanvasInput.ts) so drags
   continue outside the canvas.

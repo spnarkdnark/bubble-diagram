@@ -192,7 +192,7 @@ export function restoreWorkspace(
   if (tabs[a].view) useUi.getState().setView(tabs[a].view);
 }
 
-// ------------------------------------------------------------------ standards
+// ------------------------------------------------------------------ standards (categories, default + graphic style)
 
 function mapHistory(h: H.HistoryState<Project>, s: Standards): H.HistoryState<Project> {
   const f = (p: Project) => applyStandards(p, s);
@@ -201,7 +201,7 @@ function mapHistory(h: H.HistoryState<Project>, s: Standards): H.HistoryState<Pr
 
 /**
  * Make `s` the standards in every tab. Other tabs get their whole undo history
- * rewritten, so undoing there can never bring back an old category style.
+ * rewritten, so undoing there can never bring back an old category or graphic style.
  * The active tab keeps its history when the change came from it (its own undo
  * should still be able to revert the edit it made).
  */
@@ -228,16 +228,13 @@ export function adoptIntoStandards(p: Project): { project: Project; restyled: nu
   return { project, restyled };
 }
 
-/** Category edits in the active tab become the standards for all tabs. */
+/** Category / default style / graphic style edits in the active tab become the standards for all tabs. */
 export function installStandardsSync(): () => void {
   return useDocument.subscribe((st, prev) => {
     const p = st.history.present;
     if (st.gestureBase || p === prev.history.present || hasStandards(p, getStandards())) return;
     const q = prev.history.present;
-    const changed =
-      p.categories !== q.categories ||
-      p.categoryOrder !== q.categoryOrder ||
-      p.settings.defaultStyle !== q.settings.defaultStyle;
+    const changed = !hasStandards(p, standardsOf(q));
     // a tab switch swaps in a document that already carries the standards (handled above)
     if (changed) setStandardsEverywhere(standardsOf(p), { fromActiveTab: true });
   });
