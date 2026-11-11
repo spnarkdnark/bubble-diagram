@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { createCategory, createNode, createProject } from '../src/model/factory';
-import { adoptProject, applyStandards, standardsOf } from '../src/model/standards';
+import { adoptProject, applyStandards, standardsOf, withFirmDefaults } from '../src/model/standards';
+import { categoryResolver, matchCategory } from '../src/model/categories';
 
 describe('category standards', () => {
   it('applying standards restyles categories and keeps orphaned looks', () => {
@@ -79,5 +80,38 @@ describe('firm defaults', () => {
     lib.settings.overlap = { ...lib.settings.overlap, mode: 'lens', weightPt: 1 };
     const out = applyStandards(createProject(), standardsOf(lib));
     expect(out.settings.overlap).toEqual(lib.settings.overlap);
+  });
+});
+
+describe('category matching', () => {
+  it('matches by id and name, then by name ignoring case; creates missing ones once', () => {
+    const p = createProject();
+    const pub = p.categoryOrder.find((id) => p.categories[id].name === 'Public')!;
+    expect(matchCategory(p.categories, { id: pub, name: 'Public' })).toBe(pub);
+    expect(matchCategory(p.categories, { id: 'other', name: '  public ' })).toBe(pub);
+    expect(matchCategory(p.categories, { id: pub, name: 'Lab' })).toBeUndefined(); // same id, renamed
+    const cats = categoryResolver(p);
+    const lab = cats.resolve({ name: 'Lab' });
+    expect(cats.resolve({ name: 'LAB' })).toBe(lab);
+    expect(cats.added.map((c) => c.name)).toEqual(['Lab']);
+    expect(cats.added[0].style.fill).toMatch(/^#/); // next palette color
+  });
+
+  it('firm defaults keep matching categories and drop unused extras', () => {
+    const p = createProject();
+    const pub = p.categoryOrder.find((id) => p.categories[id].name === 'Public')!;
+    p.categories[pub] = { ...p.categories[pub], style: { ...p.categories[pub].style, fill: '#000000' } };
+    const used = createCategory('Lab', '#00ff00');
+    const unused = createCategory('Old', '#0000ff');
+    p.categories = { ...p.categories, [used.id]: used, [unused.id]: unused };
+    p.categoryOrder = [...p.categoryOrder, used.id, unused.id];
+    const n = createNode({ categoryId: used.id });
+    p.nodes = { [n.id]: n };
+    p.settings.graphic = { ...p.settings.graphic, preset: 'pencil' };
+    const out = withFirmDefaults(p, createProject());
+    expect(out.categories[pub].style.fill).toBe('#ffffba');
+    expect(out.categories[used.id]).toBeDefined();
+    expect(out.categories[unused.id]).toBeUndefined();
+    expect(out.settings.graphic.preset).toBe('clean');
   });
 });

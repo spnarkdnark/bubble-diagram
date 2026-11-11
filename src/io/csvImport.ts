@@ -6,9 +6,10 @@
  */
 import Papa from 'papaparse';
 import type { BubbleNode, Category, Point, Project, SizableKind } from '../model/types';
-import { createCategory, createNode, nextCategoryColor } from '../model/factory';
+import { createNode } from '../model/factory';
+import { categoryResolver } from '../model/categories';
 import { newShape, nodeBounds, radiusFromArea, unionBounds } from '../model/geometry';
-import { MIN_RADIUS_FT } from '../model/defaults';
+import { MIN_SIZE_FT } from '../model/defaults';
 import { parseArea, parseLength } from '../model/units';
 import { gridLayout, gridSize } from './autoLayout';
 
@@ -85,7 +86,7 @@ export function parseCsv(text: string): CsvParseResult {
     }
     rows.push({
       name: name || `Space ${rows.length + 1}`,
-      radiusFt: Math.max(MIN_RADIUS_FT, Math.round(radiusFt * 1000) / 1000),
+      radiusFt: Math.max(MIN_SIZE_FT, Math.round(radiusFt * 1000) / 1000),
       category: r.category?.trim() || null,
       kind,
     });
@@ -102,22 +103,7 @@ export function buildImport(
   rows: CsvRow[],
   fallbackCenter: Point,
 ): { nodes: BubbleNode[]; categories: Category[] } {
-  const byName = new Map(Object.values(project.categories).map((c) => [c.name.trim().toLowerCase(), c.id]));
-  const newCats: Category[] = [];
-  const working = { ...project, categories: { ...project.categories } };
-  const catId = (name: string | null): string | null => {
-    if (!name) return null;
-    const key = name.toLowerCase();
-    let id = byName.get(key);
-    if (!id) {
-      const c = createCategory(name, nextCategoryColor(working));
-      working.categories[c.id] = c;
-      newCats.push(c);
-      byName.set(key, c.id);
-      id = c.id;
-    }
-    return id;
-  };
+  const cats = categoryResolver(project);
 
   // squares reach further at their corners
   const radii = rows.map((r) => (r.kind === 'rect' ? r.radiusFt * Math.SQRT2 : r.radiusFt));
@@ -134,8 +120,8 @@ export function buildImport(
       x: pos[i].x,
       y: pos[i].y,
       shape: newShape(r.kind, r.radiusFt),
-      categoryId: catId(r.category),
+      categoryId: r.category ? cats.resolve({ name: r.category }) : null,
     }),
   );
-  return { nodes, categories: newCats };
+  return { nodes, categories: cats.added };
 }

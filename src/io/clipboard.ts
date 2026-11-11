@@ -4,7 +4,8 @@
  */
 import type { BubbleNode, Category, Connection, Id, OverlapMode, Point, Project, StyleOverrides } from '../model/types';
 import { boundsCenter, nodeBounds, unionBounds } from '../model/geometry';
-import { createCategory, newId } from '../model/factory';
+import { newId } from '../model/factory';
+import { categoryResolver } from '../model/categories';
 import { overlapKey } from '../model/overlaps';
 import { detachAnchors } from '../model/blob';
 
@@ -63,20 +64,8 @@ export interface PastePlan {
 
 /** Map a clip into new elements for `project`, centered on `at`. */
 export function planPaste(project: Project, clip: ClipPayload, at: Point): PastePlan {
-  const byName = new Map(Object.values(project.categories).map((c) => [c.name.trim().toLowerCase(), c.id]));
-  const catMap = new Map<Id, Id>();
-  const newCats: Category[] = [];
-  for (const c of clip.categories) {
-    const same = project.categories[c.id];
-    if (same && same.name === c.name) catMap.set(c.id, c.id);
-    else if (byName.has(c.name.trim().toLowerCase())) catMap.set(c.id, byName.get(c.name.trim().toLowerCase())!);
-    else {
-      const nc = createCategory(c.name, c.style);
-      newCats.push(nc);
-      catMap.set(c.id, nc.id);
-      byName.set(c.name.trim().toLowerCase(), nc.id);
-    }
-  }
+  const cats = categoryResolver(project);
+  const catMap = new Map(clip.categories.map((c) => [c.id, cats.resolve(c)]));
   const idMap = new Map<Id, Id>();
   clip.nodes.forEach((n) => idMap.set(n.id, newId()));
   const dx = at.x - clip.center.x;
@@ -105,7 +94,7 @@ export function planPaste(project: Project, clip: ClipPayload, at: Point): Paste
     const [a, b] = k.split('|');
     if (idMap.has(a) && idMap.has(b)) overlaps[overlapKey(idMap.get(a)!, idMap.get(b)!)] = v;
   }
-  return { categories: newCats, nodes, connections, overlaps };
+  return { categories: cats.added, nodes, connections, overlaps };
 }
 
 /** The "look" of the first copied element: its category (mapped by name) and overrides. */
@@ -118,11 +107,7 @@ export function clipStyle(
   if (!n.categoryId) return { categoryId: null, style: { ...n.style } };
   const c = clip.categories.find((x) => x.id === n.categoryId);
   if (!c) return { categoryId: null, style: { ...n.style } };
-  if (project.categories[c.id]?.name === c.name) return { categoryId: c.id, style: { ...n.style } };
-  const match = Object.values(project.categories).find(
-    (x) => x.name.trim().toLowerCase() === c.name.trim().toLowerCase(),
-  );
-  if (match) return { categoryId: match.id, style: { ...n.style } };
-  const nc = createCategory(c.name, c.style);
-  return { categoryId: nc.id, style: { ...n.style }, newCategory: nc };
+  const cats = categoryResolver(project);
+  const categoryId = cats.resolve(c);
+  return { categoryId, style: { ...n.style }, newCategory: cats.added[0] };
 }
