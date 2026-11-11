@@ -9,7 +9,7 @@ import {
   withSize,
 } from '../../model/geometry';
 import { dimensionText, resolveStyle } from '../../model/selectors';
-import { MIN_RADIUS_FT } from '../../model/defaults';
+import { MIN_SIZE_FT } from '../../model/defaults';
 import { detachAnchors } from '../../model/blob';
 import {
   formatArea,
@@ -23,9 +23,9 @@ import { getDoc } from '../documentStore';
 import { commit } from './shared';
 import { updateNodes } from './nodes';
 
-/** Set the half-extent (radius of a circle, half-width of a rectangle), keeping proportions. */
+/** Set the half-extent (a circle's radius, a rectangle's half-width), keeping proportions. */
 export function setRadius(ids: Id[], radiusFt: number) {
-  const r = Math.max(MIN_RADIUS_FT, radiusFt);
+  const r = Math.max(MIN_SIZE_FT, radiusFt);
   updateNodes(ids, (n) => {
     n.shape = withSize(n.shape, r);
   });
@@ -43,18 +43,18 @@ export function setArea(ids: Id[], areaSf: number) {
 export function setRectSize(ids: Id[], size: { widthFt?: number; heightFt?: number }) {
   updateNodes(ids, (n) => {
     if (n.shape.kind !== 'rect') return;
-    if (size.widthFt !== undefined) n.shape.widthFt = Math.max(MIN_RADIUS_FT * 2, size.widthFt);
-    if (size.heightFt !== undefined) n.shape.heightFt = Math.max(MIN_RADIUS_FT * 2, size.heightFt);
+    if (size.widthFt !== undefined) n.shape.widthFt = Math.max(MIN_SIZE_FT * 2, size.widthFt);
+    if (size.heightFt !== undefined) n.shape.heightFt = Math.max(MIN_SIZE_FT * 2, size.heightFt);
   });
 }
 
-/** Scroll-wheel resize: step each node to the next increment (one undo step per scroll burst). */
-export function stepRadius(ids: Id[], dir: 1 | -1, incrementFt: number) {
+/** Scroll-wheel resize: step each node's half-extent to the next increment (one undo step per scroll burst). */
+export function stepSize(ids: Id[], dir: 1 | -1, incrementFt: number) {
   updateNodes(
     ids,
     (n) => {
       const next = stepToIncrement(shapeSize(n.shape), incrementFt, dir);
-      n.shape = withSize(n.shape, Math.max(MIN_RADIUS_FT, next));
+      n.shape = withSize(n.shape, Math.max(MIN_SIZE_FT, next));
     },
     'wheel-resize',
   );

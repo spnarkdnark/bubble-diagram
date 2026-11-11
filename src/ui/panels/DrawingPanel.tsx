@@ -23,7 +23,7 @@ export function DrawingPanel() {
       <Field label="Name">
         <TextField value={doc.meta.name} onChange={A.renameProject} />
       </Field>
-      <Field label="Radius snap">
+      <Field label="Size snap" hint="Resize step for a circle's radius or half a square's side (wheel and handle)">
         <SelectField
           value={snap?.value ?? null}
           options={SNAP_OPTIONS}

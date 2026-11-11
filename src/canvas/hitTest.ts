@@ -17,12 +17,6 @@ function distToSegment(p: Point, a: Point, b: Point): number {
   return Math.hypot(p.x - (a.x + t * dx), p.y - (a.y + t * dy));
 }
 
-/** World position of a node's resize handle. */
-export function handlePosition(project: Project, id: Id): Point | null {
-  const n = project.nodes[id];
-  return n ? resizeHandle(n) : null;
-}
-
 export function topNodeAt(project: Project, p: Point): Id | null {
   for (let i = project.nodeOrder.length - 1; i >= 0; i--) {
     const id = project.nodeOrder[i];
@@ -43,7 +37,7 @@ export function hitTest(
   markers: { key: string; marker: Point }[] = [],
 ): Hit {
   if (handleFor) {
-    const h = handlePosition(project, handleFor);
+    const h = project.nodes[handleFor] ? resizeHandle(project.nodes[handleFor]) : null;
     if (h && Math.hypot(p.x - h.x, p.y - h.y) <= tolFt * 1.2) return { kind: 'handle', id: handleFor };
   }
   for (const m of markers)

@@ -117,26 +117,25 @@ function nodeScene(
   const fillPaint = { color: style.fill, alpha: style.fillOpacity };
 
   // circles are exact; every other shape is its outline polygon
-  const poly = blob ? blob.poly : nodeOutline(node, project);
+  const r = node.shape.kind === 'circle' ? node.shape.radiusFt : 0;
+  const poly = blob ? blob.poly : (nodeOutline(node, project) ?? []);
   let fill: Prim[];
   let outline: Prim[];
   if (clean) {
-    if (!poly && node.shape.kind === 'circle') {
-      const r = node.shape.radiusFt;
+    if (r) {
       fill = [{ t: 'circle', cx: node.x, cy: node.y, r, fill: fillPaint }];
       outline = stroke ? [{ t: 'circle', cx: node.x, cy: node.y, r, stroke }] : [];
     } else {
-      const pts = poly ?? [];
-      fill = [{ t: 'path', pts, closed: true, fill: fillPaint }];
-      outline = stroke ? [{ t: 'path', pts, closed: true, stroke }] : [];
+      fill = [{ t: 'path', pts: poly, closed: true, fill: fillPaint }];
+      outline = stroke ? [{ t: 'path', pts: poly, closed: true, stroke }] : [];
     }
   } else {
-    const ring =
-      !poly && node.shape.kind === 'circle'
-        ? sampleCircle(node.x, node.y, node.shape.radiusFt, circleSamples(node.shape.radiusFt, ftPerPt))
-        : node.shape.kind === 'blob'
-          ? resample(poly ?? [], 1.5 * ftPerPt) // smooth outline
-          : subdivide(poly ?? [], 1.5 * ftPerPt); // sharp corners
+    const spacing = 1.5 * ftPerPt;
+    const ring = r
+      ? sampleCircle(node.x, node.y, r, circleSamples(r, ftPerPt))
+      : blob
+        ? resample(poly, spacing) // smooth outline
+        : subdivide(poly, spacing); // sharp corners
     const colors = { fill: style.fill, fillDark: darken(style.fill, 0.28), stroke: style.stroke };
     const opts = { params, seed: seeded(node.id, g.seed), unitsPerPt: ftPerPt };
     fill = opsToPrims(sketchFill(ring, opts), colors, style.fillOpacity);

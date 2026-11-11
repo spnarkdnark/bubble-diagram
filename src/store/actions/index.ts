@@ -12,4 +12,4 @@ export * from './settings';
 export * from './view';
 export * from './overlaps';
 export * from './graphic';
-export * from './shapes';
+export * from './blobs';

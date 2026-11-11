@@ -41,7 +41,7 @@ export function createWheelHandler() {
     }
     if (!dir) return;
     const sizable = ui.selection.nodes.filter((id) => doc.nodes[id] && isSizable(doc.nodes[id].shape));
-    A.stepRadius(sizable, dir, e.shiftKey ? 1 / 12 : doc.settings.snap.radiusIncrementFt);
+    A.stepSize(sizable, dir, e.shiftKey ? 1 / 12 : doc.settings.snap.radiusIncrementFt);
     ui.setReadout(sizeReadout(over));
     window.clearTimeout(readoutTimer);
     readoutTimer = window.setTimeout(() => useUi.getState().setReadout(null), 900);

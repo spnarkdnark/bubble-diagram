@@ -70,6 +70,9 @@ const Icons = {
   ),
 };
 
+/** Bubble tool icon per shape (TypeScript requires one for every sizable kind). */
+const BUBBLE_ICONS: Record<SizableKind, ReactNode> = { circle: Icons.bubble, rect: Icons.square };
+
 export function Toolbar() {
   const doc = useDoc();
   const canUndo = useDocument((s) => s.history.past.length > 0);
@@ -82,12 +85,7 @@ export function Toolbar() {
     <header className="toolbar">
       <div className="group">
         <ToolButton tool="select" label="Select" shortcut="V" icon={Icons.select} />
-        <ToolButton
-          tool="bubble"
-          label="Bubble"
-          shortcut="B; B again switches shape"
-          icon={bubbleKind === 'rect' ? Icons.square : Icons.bubble}
-        />
+        <ToolButton tool="bubble" label="Bubble" shortcut="B; B again switches shape" icon={BUBBLE_ICONS[bubbleKind]} />
         <select
           className="input narrow"
           value={bubbleKind}

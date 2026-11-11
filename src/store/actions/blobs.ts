@@ -2,6 +2,7 @@
 import type { Id, Point } from '../../model/types';
 import { createNode } from '../../model/factory';
 import { EXTERIOR_CATEGORY } from '../../model/defaults';
+import { matchCategory } from '../../model/categories';
 import { pxPerFt } from '../../model/units';
 import {
   blobFromClicks,
@@ -26,15 +27,13 @@ export function createBlob(pts: BuildPoint[]): Id | null {
   if (pts.length < 3) return null;
   const doc = getDoc();
   const { shape, origin } = toBlobShape(pts, doc.settings.shapeGapFt, circleRings(doc));
-  const exterior = Object.values(doc.categories).find(
-    (c) => c.name.trim().toLowerCase() === EXTERIOR_CATEGORY.toLowerCase(),
-  );
+  const exterior = matchCategory(doc.categories, { name: EXTERIOR_CATEGORY });
   const n = createNode({
     name: `Outdoor ${shapeCount() + 1}`,
     x: origin.x,
     y: origin.y,
     shape,
-    categoryId: exterior?.id ?? null,
+    categoryId: exterior ?? null,
   });
   commit((d) => {
     d.nodes[n.id] = n;

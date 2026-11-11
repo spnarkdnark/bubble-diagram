@@ -1,12 +1,12 @@
 /**
- * Select tool: click/shift-click/marquee selection, moving, the circle resize
+ * Select tool: click/shift-click/marquee selection, moving, the resize
  * handle, shape point editing, overlap markers and in-place name/area editing.
  */
 import type { Id, Point } from '../../model/types';
 import { blobGeometry, movePoint } from '../../model/blob';
 import { resizeHandle, sizeAtHandle, withSize } from '../../model/geometry';
 import { dimensionText } from '../../model/selectors';
-import { MIN_RADIUS_FT } from '../../model/defaults';
+import { MIN_SIZE_FT } from '../../model/defaults';
 import { snap } from '../../model/units';
 import { getDoc, useDocument } from '../../store/documentStore';
 import { useUi } from '../../store/uiStore';
@@ -76,7 +76,7 @@ function resizeGesture(id: Id): Gesture {
       // the half-extent (radius / half-width) snaps, so a square's side moves in 2× steps
       let r = sizeAtHandle(n, e.world);
       if (!e.shift) r = snap(r, getDoc().settings.snap.radiusIncrementFt);
-      r = Math.max(MIN_RADIUS_FT, r);
+      r = Math.max(MIN_SIZE_FT, r);
       gesture().preview((d) => {
         d.nodes[id].shape = withSize(d.nodes[id].shape, r);
       });

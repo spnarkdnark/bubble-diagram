@@ -57,15 +57,17 @@ export const DEFAULT_CATEGORIES: { name: string; style: StyleProps }[] = [
   { name: EXTERIOR_CATEGORY, style: firmStyle('#ffdfba', { strokeStyle: 'dashed' }) },
 ];
 
-/** Shapes the bubble tool places, in picker order (a new sizable kind gets a row here). */
-export const SIZABLE_SHAPES: { kind: SizableKind; label: string }[] = [
-  { kind: 'circle', label: 'Circle' },
-  { kind: 'rect', label: 'Square' },
-];
+/** Picker label per shape the bubble tool places (TypeScript requires every sizable kind), in picker order. */
+const SHAPE_LABELS: Record<SizableKind, string> = { circle: 'Circle', rect: 'Square' };
+export const SIZABLE_SHAPES = (Object.keys(SHAPE_LABELS) as SizableKind[]).map((kind) => ({
+  kind,
+  label: SHAPE_LABELS[kind],
+}));
 
 /** Half-extent of a new bubble: a 10' radius circle, a 20' square. */
 export const DEFAULT_RADIUS_FT = 10;
-export const MIN_RADIUS_FT = 0.5;
+/** Smallest half-extent (radius / half-side) a bubble can be resized to. */
+export const MIN_SIZE_FT = 0.5;
 export const RADIUS_SNAP_FT = 0.5; // 6"
 export const NUDGE_FT = 1;
 export const NUDGE_BIG_FT = 10;

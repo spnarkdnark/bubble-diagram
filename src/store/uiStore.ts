@@ -45,7 +45,7 @@ interface UiState {
   bumpFontEpoch: () => void;
   /** points clicked so far with the shape tool (world feet) */
   shapeDraft: Point[] | null;
-  /** label line being edited on the canvas: a node's name or its size (area/radius) */
+  /** label line being edited on the canvas: a node's name or its size line (area / dimensions) */
   editingLabel: EditingLabel | null;
   setEditingLabel: (e: EditingLabel | null) => void;
   setShapeDraft: (pts: Point[] | null) => void;
